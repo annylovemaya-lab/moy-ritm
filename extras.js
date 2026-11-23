@@ -200,3 +200,35 @@ export async function pushFridge(items) {
   }
   return { ok: false, msg: 'Не удалось записать, попробуй ещё раз' };
 }
+
+/* ---------- 8. Погода (Open-Meteo, без ключа): по геопозиции или по названию города ---------- */
+export const getPos = () => new Promise((res, rej) => {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return rej(new Error('Геопозиция недоступна'));
+  navigator.geolocation.getCurrentPosition((p) => res({ lat: Math.round(p.coords.latitude * 100) / 100, lon: Math.round(p.coords.longitude * 100) / 100 }), (er) => rej(new Error(er && er.code === 1 ? 'Доступ к геопозиции запрещён' : 'Не удалось определить место')), { timeout: 12000, maximumAge: 600000 });
+});
+export async function geocode(name) {
+  const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=ru&name=' + encodeURIComponent(name));
+  if (!r.ok) throw new Error('Не нашла город');
+  const j = await r.json(), x = j.results && j.results[0]; if (!x) throw new Error('Такого города не нашла');
+  return { lat: Math.round(x.latitude * 100) / 100, lon: Math.round(x.longitude * 100) / 100, place: x.name + (x.country ? ', ' + x.country : '') };
+}
+export async function fetchWeather(lat, lon) {
+  const u = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=auto&wind_speed_unit=ms';
+  const r = await fetch(u); if (!r.ok) throw new Error('Погода не загрузилась');
+  const j = await r.json(), c = j.current || {}, d = j.daily || {};
+  return { t: Math.round(c.temperature_2m), feel: Math.round(c.apparent_temperature), code: c.weather_code, wind: Math.round(c.wind_speed_10m || 0), tmax: Math.round((d.temperature_2m_max || [0])[0]), tmin: Math.round((d.temperature_2m_min || [0])[0]), pop: (d.precipitation_probability_max || [0])[0] || 0, at: Date.now() };
+}
+export function wxText(code) {
+  if (code === 0) return 'ясно'; if (code >= 1 && code <= 3) return 'облачно'; if (code === 45 || code === 48) return 'туман';
+  if (code >= 51 && code <= 57) return 'морось'; if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return 'дождь';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'снег'; if (code >= 95) return 'гроза'; return 'переменная облачность';
+}
+// Подходящее значение для выбора образа: тепло / прохладно / холодно / дождь
+export function tempClass(w) {
+  if (!w) return null;
+  const wet = (w.code >= 51 && w.code <= 67) || (w.code >= 80 && w.code <= 82) || w.code >= 95 || w.pop >= 60;
+  const snow = (w.code >= 71 && w.code <= 77) || w.code === 85 || w.code === 86;
+  const f = Math.min(w.feel, Math.round((w.tmax + w.t) / 2));
+  if (wet && !snow && f >= 0) return 'дождь';
+  return f >= 16 ? 'тепло' : f >= 6 ? 'прохладно' : 'холодно';
+}

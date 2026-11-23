@@ -1,4 +1,4 @@
-const V = 'moy-ritm-v2-9';
+const V = 'moy-ritm-v3-0';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'core.js', 'tips.js', 'mentor2.js', 'extras.js', 'tastes.js', 'menu.js', 'config.json', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -9,7 +9,7 @@ self.addEventListener('activate', (e) => {
 });
 // Сначала сеть (чтобы изменения подхватывались), без сети берём из памяти
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request).then((r) => {
       const copy = r.clone();

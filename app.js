@@ -2,7 +2,7 @@ import { VERSION, PLAN, buildDay, fmt, parseHM, dayOfWeek, addDays, weekNumber, 
 import { TIPS, WEEK_TOPICS, pick, byTopic } from './tips.js';
 import { TASTE0, MONTH_BOOKS, SERIES, FILMS, MUSIC, MUSIC_CTX, BOOKS, GIFTS, EVENING, WHERE, TEMP, FACES, FACE_NOTE, HAIR, hairFor, SKIN, NAILS, subFor, colorOfDay, outfitOf, pick3, mark as tMark, links as tLinks, norm as tNorm } from './tastes.js';
 import { weekMenu, weekShopping, mondayOfDs } from './menu.js';
-import { parseListing, shrinkImage, putPhoto, getPhoto, delPhoto, askLocal, icsFromEvents, drawWallpaper, haptic, beep, unlockAudio, lockCfg, setPin, checkPin, bioSupported, bioRegister, bioCheck, lockOff, ghCfg, ghSave, guessRepo, pushFridge } from './extras.js';
+import { parseListing, shrinkImage, putPhoto, getPhoto, delPhoto, askLocal, icsFromEvents, drawWallpaper, haptic, beep, unlockAudio, lockCfg, setPin, checkPin, bioSupported, bioRegister, bioCheck, lockOff, ghCfg, ghSave, guessRepo, pushFridge, getPos, geocode, fetchWeather, wxText, tempClass } from './extras.js';
 const MINI = typeof location !== 'undefined' && /[?&]mini=1/.test(location.search || '');
 import { outfit, planMonths, LOOK_ITEMS0, LOOK_STEPS0, REL_Q3, badgeState, CYCLE0, cyclePhase, PH, PH_SAY, PH_NOTE, SYM, phaseEnergy, ENERGY, FEEL, energyValue, moodValue, feelName, feelReply, topFeels, PLAN_OPTS, planOf, needsCheckpoint, CP_CHOICES, MAX_ACTIVE, REL_Q1, REL_Q2, relAdvice, relPattern, relName, MONEY0, monthKey, moneyStats, moneySay, rub, HEALTH0, HEALTH_ADD, CHECK_ADD, EXERCISES, exById, exTotal, ANX_BEST, todayKit, fridgeSorted, fridgeDays, fridgeSay, recipeMatches, INCOME_IDEAS, aptPlan, healthProgress, healthNext, healthOverdue } from './mentor2.js';
 
@@ -29,6 +29,7 @@ function fixS() {
   if (!Array.isArray(S.fridge)) S.fridge = [];
   if (!S.taste || !S.taste.v) S.taste = TASTE0();
   S.taste = { ...TASTE0(), ...S.taste, ctx: { ...TASTE0().ctx, ...(S.taste.ctx || {}) }, books: { cur: '', done: [], ...(S.taste.books || {}) } };
+  if (!S.wx) S.wx = { on: false, lat: 0, lon: 0, place: '', w: null, manual: '' };
   if (!Array.isArray(S.apts)) S.apts = [];
   if (!S.apts.length && S.money && S.money.apt && S.money.apt.name) S.apts.push({ id: uid(), name: S.money.apt.name, url: S.money.apt.url || '', price: Number(S.money.apt.price) || 0, area: 0, rooms: '', floor: '', note: '', ph: [] });
   if (!Array.isArray(S.inti)) S.inti = [];
@@ -343,6 +344,29 @@ function craveSheet() {
 
 
 
+
+/* ---------- Погода ---------- */
+let wxBusy = false;
+async function refreshWeather(force) {
+  const W = S.wx; if (!W || !W.on || !W.lat || wxBusy) return;
+  if (!force && W.w && Date.now() - W.w.at < 60 * 60000) return;
+  wxBusy = true;
+  try {
+    W.w = await fetchWeather(W.lat, W.lon);
+    if (W.manual !== todayStr()) { const k = tempClass(W.w); if (k) S.taste.ctx.temp = k; }
+    save(); if (tab === 'today' || tab === 'taste') render();
+  } catch (e) { /* остаётся прежняя погода */ }
+  wxBusy = false;
+}
+const wxLine = () => { const w = S.wx && S.wx.on && S.wx.w; return w ? w.t + '°, ощущается как ' + w.feel + '°, ' + wxText(w.code) + (w.pop >= 40 ? ', осадки ' + w.pop + '%' : '') + '; днём от ' + w.tmin + ' до ' + w.tmax + '°' : ''; };
+function wxCard() {
+  const W = S.wx, line = wxLine();
+  let h = '<div class="card"><h2>Погода</h2>';
+  if (W.on && W.lat) h += '<div class="note">' + (W.place ? '<b>' + esc(W.place) + '</b><br>' : '') + (line ? esc(line) : 'Загружаю…') + '</div><div class="muted" style="margin:8px 0">Образ подбирается по ощущаемой температуре и осадкам. Выбор «Погода» ниже можно поправить вручную на сегодня.</div><div class="addrow"><button class="btn g s" data-act="wxRefresh">Обновить</button><button class="btn g s" data-act="wxOff">Отключить</button></div>';
+  else h += '<div class="muted" style="margin-bottom:8px">Могу сама брать погоду и подбирать образ. Нужно место: по геопозиции или по названию города. Координаты округляются и уходят только в бесплатный сервис Open-Meteo, больше никуда.</div><div class="addrow" style="flex-wrap:wrap"><button class="btn s" data-act="wxGeo">По геопозиции</button></div><div class="muted" style="margin:10px 0 4px">Или город</div><input type="text" id="wxCity" placeholder="Например: Москва"><div class="addrow"><button class="btn g s" data-act="wxCity">Найти город</button></div>';
+  return h + '</div>';
+}
+
 /* ---------- Подборки по вкусам ---------- */
 const CATS = { series: SERIES, films: FILMS, books: BOOKS };
 function tPicks(kind) {
@@ -364,13 +388,14 @@ function pickRow(kind, label, names, marks) {
 function dayPicks(ds) {
   const T = S.taste, dow = dayOfWeek(ds), where = dow >= 6 ? 'выходной' : T.ctx.where === 'выходной' ? 'работа' : T.ctx.where, o = outfitOf(ds, where, T.ctx.temp), [c1, c2] = colorOfDay(ds);
   const fri = dow === 5 || dow === 6, names = fri ? tPicks('films') : tPicks('series');
-  return '<div class="card"><h2>Подборка дня</h2><div class="note"><b>Цвет дня:</b> ' + esc(c1 + ' и ' + c2) + '</div><div class="note"><b>Образ:</b> ' + esc(o.base) + (o.outer ? ', ' + esc(o.outer) : '') + '. Акцент: ' + esc(o.colors) + '.</div><div class="note"><b>Вечером ' + (fri ? 'фильм' : 'сериал') + ':</b> ' + esc(names.join(', ')) + '</div><div class="addrow"><button class="btn g s" data-act="goTaste">Все подборки</button></div></div>';
+  return '<div class="card"><h2>Подборка дня</h2><div class="note"><b>Цвет дня:</b> ' + esc(c1 + ' и ' + c2) + '</div>' + (wxLine() ? '<div class="note"><b>Погода:</b> ' + esc(wxLine()) + (S.wx.w.pop >= 50 ? '. Возьми зонт' : '') + '</div>' : '') + '<div class="note"><b>Образ:</b> ' + esc(o.base) + (o.outer ? ', ' + esc(o.outer) : '') + '. Акцент: ' + esc(o.colors) + '.</div><div class="note"><b>Вечером ' + (fri ? 'фильм' : 'сериал') + ':</b> ' + esc(names.join(', ')) + '</div><div class="addrow"><button class="btn g s" data-act="goTaste">Все подборки</button></div></div>';
 }
 function renderTaste() {
   const T = S.taste, c = T.ctx, ds = todayStr();
   let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Подборки</h1><p class="sub">Только названия, решаешь ты. Отмечай «смотрела», «не моё» и «хочу», и я буду точнее.</p>';
   const chips = (arr, key, cur) => '<div class="chips">' + arr.map(([k, t]) => '<button class="chip pick' + (k === cur ? ' on' : '') + '" data-act="tctx" data-v="' + key + '|' + k + '">' + t + '</button>').join('') + '</div>';
   const o = outfitOf(ds, c.where, c.temp), [c1, c2] = colorOfDay(ds);
+  h += wxCard();
   h += '<div class="card"><h2>Образ дня</h2><div class="muted" style="margin:6px 0 4px">Куда</div>' + chips(WHERE, 'where', c.where) + '<div class="muted" style="margin:10px 0 4px">Какая погода</div>' + chips(TEMP, 'temp', c.temp) +
     '<div class="note" style="margin-top:10px"><b>' + esc(o.base) + '</b>' + (o.outer ? '<br>Сверху: ' + esc(o.outer) : '') + '<br>Цвета дня: ' + esc(o.colors) + (o.acc ? '<br>Акцент: ' + esc(o.acc) : '') + '</div></div>';
   h += pickRow('series', 'Сериал на вечер', tPicks('series'), [['seen', 'Смотрела'], ['no', 'Не моё'], ['want', 'Хочу']]);
@@ -1299,7 +1324,11 @@ async function onClick(e) {
     case 'menuShop': { const have = new Set(S.shop.map((x) => x.t.toLowerCase())); let n = 0; weekShopping(mondayOf(todayStr()), cfg.lesson ? cfg.lesson.dow : 4).forEach((x) => { if (!have.has(x.toLowerCase())) { S.shop.push({ id: uid(), t: x, done: false }); n++; } }); save(); redraw(); toast('Добавлено: ' + n); } break;
     case 'subGo': { const r = subFor(val('subIn')), o = document.getElementById('subOut'); if (o) o.innerHTML = r.length ? r.map((x) => '<div class="note"><b>' + esc(x[0]) + ':</b> ' + esc(x[1]) + '</div>').join('') : '<div class="muted" style="margin-top:8px">Не нашла. Попробуй другое слово.</div>'; } break;
     case 'tmore': { const k = v; S.taste.r[k] = (S.taste.r[k] || 0) + 1; save(); redraw(); } break;
-    case 'tctx': { const [k, x] = v.split('|'); S.taste.ctx[k] = x; S.taste.r[k === 'music' ? 'music' : 'x'] = 0; save(); redraw(); } break;
+    case 'wxGeo': { try { toast('Определяю место…'); const p = await getPos(); S.wx = { ...S.wx, on: true, lat: p.lat, lon: p.lon, place: 'по геопозиции', w: null }; save(); await refreshWeather(true); redraw(); } catch (e2) { toast(e2.message || 'Не получилось'); } } break;
+    case 'wxCity': { const n = val('wxCity').trim(); if (!n) { toast('Впиши город'); break; } try { const g = await geocode(n); S.wx = { ...S.wx, on: true, lat: g.lat, lon: g.lon, place: g.place, w: null }; save(); await refreshWeather(true); redraw(); } catch (e2) { toast(e2.message || 'Не получилось'); } } break;
+    case 'wxRefresh': refreshWeather(true).then(() => redraw()); break;
+    case 'wxOff': S.wx = { on: false, lat: 0, lon: 0, place: '', w: null, manual: '' }; save(); redraw(); break;
+    case 'tctx': { const [k, x] = v.split('|'); S.taste.ctx[k] = x; if (k === 'temp') S.wx.manual = todayStr(); S.taste.r[k === 'music' ? 'music' : 'x'] = 0; save(); redraw(); } break;
     case 'tmark': {
       const [kind, how, i] = v.split('|'), name = tPicks(kind)[Number(i)]; if (!name) break;
       if (how === 'no') { openSheet('<h2>Что не так?</h2><div class="muted" style="margin-bottom:8px">Выбери причину, я запомню и буду учитывать.</div><div class="chips">' + ['слишком жестоко', 'скучно', 'не люблю этот жанр', 'уже надоело', 'не моё по другой причине'].map((x) => '<button class="chip pick" data-act="twhy" data-v="' + kind + '|' + esc(name).replace(/\|/g, '/') + '|' + esc(x) + '">' + x + '</button>').join('') + '</div><div class="addrow"><button class="btn g" data-act="calmStop">Отмена</button></div>', { t: 'twhy' }); break; }
@@ -1393,6 +1422,7 @@ async function boot() {
   if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('sw.js'); } catch (e) {} }
   await render();
   document.addEventListener('pointerdown', unlockAudio, { once: true });
+  refreshWeather();
   setInterval(() => {
     const a = document.activeElement;
     if (tab === 'today' && sel === todayStr() && !(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA'))) render();
@@ -1400,6 +1430,7 @@ async function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && lockCfg()) { hiddenAt = Date.now(); lockDraw(); }
     if (document.visibilityState === 'visible' && lockCfg() && Date.now() - hiddenAt < 30000) lockHide();
+    if (document.visibilityState === 'visible') refreshWeather();
     if (document.visibilityState === 'visible') { sel = todayStr(); firstScroll = true; render(); }
   });
 }
