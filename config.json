@@ -12,8 +12,8 @@
   "bedtimes": [
     "23:45",
     "23:30",
-    "23:15",
-    "23:00"
+    "23:00",
+    "22:30"
   ],
   "weekendBedExtra": 30,
   "breakfast": "06:50",
@@ -25,12 +25,12 @@
     "minutes": 60
   },
   "projectDays": [
-    1,
-    3
-  ],
-  "freeDays": [
     2,
     5
+  ],
+  "freeDays": [
+    1,
+    3
   ],
   "breaks": [
     {
@@ -53,5 +53,6 @@
       "t": "16:10",
       "k": "air"
     }
-  ]
+  ],
+  "quietWeekendUntil": "10:00"
 }

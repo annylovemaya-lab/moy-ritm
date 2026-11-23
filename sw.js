@@ -1,11 +1,11 @@
-const V = 'moy-ritm-v2-6';
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'core.js', 'tips.js', 'mentor2.js', 'config.json', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
+const V = 'moy-ritm-v2-9';
+const FILES = ['./', 'index.html', 'style.css', 'app.js', 'core.js', 'tips.js', 'mentor2.js', 'extras.js', 'tastes.js', 'menu.js', 'config.json', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(V).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== V).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== V && k !== 'moy-meta').map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 // Сначала сеть (чтобы изменения подхватывались), без сети берём из памяти
 self.addEventListener('fetch', (e) => {
@@ -22,7 +22,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = { title: 'Мой ритм', body: '' };
   try { d = { ...d, ...e.data.json() }; } catch (err) { if (e.data) d.body = e.data.text(); }
-  e.waitUntil(self.registration.showNotification(d.title, { body: d.body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: d.tag || 'ritm' }));
+  e.waitUntil(Promise.all([self.registration.showNotification(d.title, { body: d.body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: d.tag || 'ritm' }), caches.open('moy-meta').then((c) => c.put('last-push', new Response(String(Date.now())))).catch(() => {})]));
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();

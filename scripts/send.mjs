@@ -1,7 +1,7 @@
 // Отправка мягких напоминаний. Запускается из GitHub Actions по таймеру cron-job.org каждые 5 минут.
 // Проверка без отправки: node scripts/send.mjs --dry 2026-11-23T22:16
 import fs from 'node:fs';
-import { dueReminders } from '../core.js';
+import { dueReminders, expiryReminder } from '../core.js';
 
 const cfg = JSON.parse(fs.readFileSync(new URL('../config.json', import.meta.url), 'utf8'));
 const dryIdx = process.argv.indexOf('--dry');
@@ -19,6 +19,10 @@ function moscowNow() {
 
 const { ds, min } = moscowNow();
 const due = dueReminders(ds, min, cfg);
+try {
+  const fp = new URL('../fridge.json', import.meta.url);
+  if (fs.existsSync(fp)) { const er = expiryReminder(ds, min, cfg, JSON.parse(fs.readFileSync(fp, 'utf8')).items); if (er) due.push(er); }
+} catch (e) { console.error('fridge.json не прочитан:', e.message); }
 console.log('Время по Москве:', ds, String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'), '· к отправке:', due.length);
 if (!due.length) process.exit(0);
 if (dry) { due.forEach((r) => console.log(' -', r.id, r.text)); process.exit(0); }
