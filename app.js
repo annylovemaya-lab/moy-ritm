@@ -1,8 +1,10 @@
-import { VERSION, PLAN, buildDay, fmt, parseHM, dayOfWeek, addDays, weekNumber, daysToStart, bedtime } from './core.js';
+import { VERSION, EMO, PLAN, buildDay, fmt, parseHM, dayOfWeek, addDays, weekNumber, daysToStart, bedtime } from './core.js';
 import { TIPS, WEEK_TOPICS, pick, byTopic } from './tips.js';
 import { TASTE0, MONTH_BOOKS, SERIES, FILMS, MUSIC, MUSIC_CTX, BOOKS, GIFTS, EVENING, WHERE, TEMP, FACES, FACE_NOTE, HAIR, hairFor, SKIN, NAILS, subFor, colorOfDay, outfitOf, pick3, mark as tMark, links as tLinks, norm as tNorm } from './tastes.js';
 import { weekMenu, weekShopping, mondayOfDs } from './menu.js';
-import { parseListing, shrinkImage, putPhoto, getPhoto, delPhoto, askLocal, icsFromEvents, drawWallpaper, haptic, beep, unlockAudio, lockCfg, setPin, checkPin, bioSupported, bioRegister, bioCheck, lockOff, ghCfg, ghSave, guessRepo, pushFridge, getPos, geocode, fetchWeather, wxText, tempClass } from './extras.js';
+import * as V4 from './v4.js';
+import { ico } from './icons.js';
+import { parseListing, shrinkImage, putPhoto, getPhoto, delPhoto, askLocal, icsFromEvents, drawWallpaper, haptic, beep, unlockAudio, lockCfg, setPin, checkPin, bioSupported, bioRegister, bioCheck, lockOff, ghCfg, ghSave, guessRepo, pushFridge, getPos, geocode, fetchWeather, wxText, tempClass , pushFile } from './extras.js';
 const MINI = typeof location !== 'undefined' && /[?&]mini=1/.test(location.search || '');
 import { outfit, planMonths, LOOK_ITEMS0, LOOK_STEPS0, REL_Q3, badgeState, CYCLE0, cyclePhase, PH, PH_SAY, PH_NOTE, SYM, phaseEnergy, ENERGY, FEEL, energyValue, moodValue, feelName, feelReply, topFeels, PLAN_OPTS, planOf, needsCheckpoint, CP_CHOICES, MAX_ACTIVE, REL_Q1, REL_Q2, relAdvice, relPattern, relName, MONEY0, monthKey, moneyStats, moneySay, rub, HEALTH0, HEALTH_ADD, CHECK_ADD, EXERCISES, exById, exTotal, ANX_BEST, todayKit, fridgeSorted, fridgeDays, fridgeSay, recipeMatches, INCOME_IDEAS, aptPlan, healthProgress, healthNext, healthOverdue } from './mentor2.js';
 
@@ -20,6 +22,7 @@ const SM0 = { on: false, base: 20, price: 0, pack: 7, from: '', quit: '', days: 
 let S = { done: {}, water: {}, sleep: {}, minMode: {}, tasks: null, shop: [], prep: {}, review: {}, diary: {}, projects: [], pa: {}, ci: {}, sm: SM0, rel: {}, money: null, health: null, ideas: [], cycle: null, look: null, fridge: [], inti: [] };
 try { const raw = JSON.parse(localStorage.getItem(KEY) || 'null'); if (raw) S = { ...S, ...raw }; } catch (e) {}
 function fixS() {
+  V4.fixV4(S);
   S.sm = { ...SM0, ...(S.sm || {}) };
   S.money = { ...MONEY0, ...(S.money || {}), months: { ...((S.money && S.money.months) || {}) } };
   if (!Array.isArray(S.health)) S.health = HEALTH0();
@@ -73,13 +76,16 @@ const IC = {
   drop: '<path d="M12 3.5C9 8 6.5 10.6 6.5 14a5.5 5.5 0 0 0 11 0c0-3.4-2.5-6-5.5-10.5z"/>'
 };
 const icon = (k) => '<svg viewBox="0 0 24 24">' + IC[k] + '</svg>';
-const TABS = [['today', 'Сегодня'], ['week', 'Неделя'], ['proj', 'Проекты'], ['mentor', 'Наставник'], ['more', 'Ещё']];
+IC.friend = '<path d="M4 6.5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-6l-4.5 4v-4H7a3 3 0 0 1-3-3z"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>';
+IC.menu = '<rect x="4" y="4" width="6.5" height="6.5" rx="2.2"/><rect x="13.500" y="4" width="6.5" height="6.5" rx="2.2"/><rect x="4" y="13.500" width="6.5" height="6.5" rx="2.2"/><rect x="13.500" y="13.500" width="6.5" height="6.5" rx="2.2"/>';
+const TABS = [['today', 'Сейчас'], ['week', 'План'], ['friend', 'Подружка'], ['menu', 'Меню']];
 IC.week = IC.week; IC.more = IC.more;
 
 let tab = 'today';
 let privOpen = false;
 let sel = todayStr();
 let firstScroll = true;
+let showPast = false;
 const view = document.getElementById('view');
 const tabsEl = document.getElementById('tabs');
 
@@ -97,11 +103,11 @@ async function copy(text) {
 
 /* ---------- Подсчёты ---------- */
 function dayList(ds) {
-  const all = buildDay(ds, cfg, ctxFor(ds));
+  const all = V4.applyDay(ds, buildDay(ds, cfg, ctxFor(ds)));
   return S.minMode[ds] ? all.filter((b) => b.essential) : all;
 }
 function dayStats(ds) {
-  const list = dayList(ds).filter((b) => !b.optional);
+  const list = dayList(ds).filter((b) => !b.optional && !b.skipped);
   const d = S.done[ds] || {};
   const done = list.filter((b) => d[b.id]).length;
   return { done, total: list.length, pct: list.length ? Math.round((done / list.length) * 100) : 0 };
@@ -274,7 +280,7 @@ const sheetEl = document.getElementById('sheet');
 const sheetBody = document.getElementById('sheetBody');
 let sh = null, shTimer = null;
 function openSheet(html, st) { sh = st || {}; sheetBody.innerHTML = html; sheetEl.classList.add('show'); sheetBody.scrollTop = 0; }
-function closeSheet() { sheetEl.classList.remove('show'); sh = null; clearInterval(shTimer); shTimer = null; }
+function closeSheet() { sheetEl.classList.remove('show'); sh = null; clearInterval(shTimer); shTimer = null; V4.stop(); }
 const scale = (id, labels, cur) => '<div class="scale" id="' + id + '">' + labels.map((l, i) => '<button data-act="pickScale" data-k="' + id + '" data-v="' + (i + 1) + '" class="' + (cur === i + 1 ? 'on' : '') + '"><b>' + (i + 1) + '</b><span>' + l + '</span></button>').join('') + '</div>';
 
 function sessSheet(id) {
@@ -392,12 +398,12 @@ function dayPicks(ds) {
 }
 function renderTaste() {
   const T = S.taste, c = T.ctx, ds = todayStr();
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Подборки</h1><p class="sub">Только названия, решаешь ты. Отмечай «смотрела», «не моё» и «хочу», и я буду точнее.</p>';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Подборки</h1><p class="sub">Только названия, решаешь ты. Отмечай «смотрела», «не моё» и «хочу», и я буду точнее.</p>';
   const chips = (arr, key, cur) => '<div class="chips">' + arr.map(([k, t]) => '<button class="chip pick' + (k === cur ? ' on' : '') + '" data-act="tctx" data-v="' + key + '|' + k + '">' + t + '</button>').join('') + '</div>';
   const o = outfitOf(ds, c.where, c.temp), [c1, c2] = colorOfDay(ds);
   h += wxCard();
   h += '<div class="card"><h2>Образ дня</h2><div class="muted" style="margin:6px 0 4px">Куда</div>' + chips(WHERE, 'where', c.where) + '<div class="muted" style="margin:10px 0 4px">Какая погода</div>' + chips(TEMP, 'temp', c.temp) +
-    '<div class="note" style="margin-top:10px"><b>' + esc(o.base) + '</b>' + (o.outer ? '<br>Сверху: ' + esc(o.outer) : '') + '<br>Цвета дня: ' + esc(o.colors) + (o.acc ? '<br>Акцент: ' + esc(o.acc) : '') + '</div></div>';
+    '<div class="note" style="margin-top:10px"><b>' + esc(o.base) + '</b>' + (o.outer ? '<br>Сверху: ' + esc(o.outer) : '') + '<br>Цвета дня' + V4.swatches(c1, c2) + (o.acc ? '<br>Акцент: ' + esc(o.acc) : '') + '</div></div>';
   h += pickRow('series', 'Сериал на вечер', tPicks('series'), [['seen', 'Смотрела'], ['no', 'Не моё'], ['want', 'Хочу']]);
   h += pickRow('films', 'Фильм на выходные', tPicks('films'), [['seen', 'Смотрела'], ['no', 'Не моё'], ['want', 'Хочу']]);
   h += '<div class="card"><h2>Музыка</h2>' + chips(MUSIC_CTX, 'music', c.music) + '</div>' + pickRow('music', 'Включи: ' + (MUSIC_CTX.find((x) => x[0] === c.music) || [0, ''])[1].toLowerCase(), tPicks('music'), [['no', 'Не моё']]);
@@ -415,7 +421,7 @@ function renderTaste() {
 
 /* ---------- Квартиры ---------- */
 function renderApts() {
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Квартиры</h1><p class="sub">Ссылки и фото я сама не читаю. Поэтому: вставь текст объявления, я вытащу цену, метраж и этаж. Фото сохраняются на телефоне.</p>';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Квартиры</h1><p class="sub">Ссылки и фото я сама не читаю. Поэтому: вставь текст объявления, я вытащу цену, метраж и этаж. Фото сохраняются на телефоне.</p>';
   h += '<div class="card"><h2>Новый вариант</h2><textarea id="apText" rows="3" placeholder="Вставь текст объявления (необязательно)"></textarea><div class="addrow"><button class="btn g s" data-act="aptFill">Разобрать текст</button></div>' +
     '<div class="muted" style="margin:10px 0 4px">Название или адрес</div><input type="text" id="apName"><div class="muted" style="margin:10px 0 4px">Ссылка</div><input type="text" id="apUrl">' +
     '<div class="muted" style="margin:10px 0 4px">Цена, ₽</div><input type="number" inputmode="numeric" id="apPrice"><div class="muted" style="margin:10px 0 4px">Площадь, м²</div><input type="text" inputmode="decimal" id="apArea">' +
@@ -538,7 +544,7 @@ function calmMenu() {
     EXERCISES.map((x) => '<div class="kv" style="align-items:flex-start;gap:10px"><span><b>' + esc(x.t) + '</b><br><small class="muted">' + esc(x.why) + ' ' + Math.ceil(exTotal(x) / 60) + ' мин.</small></span><button class="btn s" data-act="calmGo" data-v="' + x.k + '">Начать</button></div>').join('') +
     '<div class="addrow"><button class="btn g" data-act="calmStop">Закрыть</button></div>', { t: 'calmMenu' });
 }
-function calmStart(k) { calmShow(k, 0); }
+function calmStart(k) { V4.calm(k, 0); }
 function calmNext() { if (sh && sh.t === 'calm') calmShow(sh.k, sh.i + 1); }
 function calmShow(k, i) {
   const ex = exById(k);
@@ -595,7 +601,7 @@ async function checkPushStale() {
 }
 function renderFridge() {
   const today = todayStr(), items = fridgeSorted(S.fridge, today);
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Холодильник</h1><p class="sub">Что есть дома и до какого срока. Подскажу, что приготовить.</p>';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Холодильник</h1><p class="sub">Что есть дома и до какого срока. Подскажу, что приготовить.</p>';
   h += '<div class="card"><h2>Добавить продукты</h2><input type="text" id="frName" placeholder="Например: молоко, яйца, сыр"><div class="muted" style="margin:10px 0 4px">Срок годности (можно пропустить)</div><input type="date" id="frDate">' +
     '<div class="chips" style="margin-top:8px">' + [['3 дня', 3], ['неделя', 7], ['2 недели', 14], ['месяц', 30]].map((x) => '<button class="chip pick" data-act="frQuick" data-v="' + x[1] + '">' + x[0] + '</button>').join('') + '</div>' +
     '<div class="addrow"><button class="btn" data-act="fridgeAdd">Добавить</button></div></div>';
@@ -679,28 +685,44 @@ function renderToday() {
   const greet = hr < 5 ? 'Доброй ночи' : hr < 12 ? 'Доброе утро' : hr < 18 ? 'Добрый день' : 'Добрый вечер';
   const mon = mondayOf(ds);
 
-  let nowIdx = -1;
-  if (ds === today) { const n = nowMin(); list.forEach((b, i) => { if (b.t <= n) nowIdx = i; }); if (nowIdx >= 0 && list[nowIdx].id === 'bed' && n < list[nowIdx].t) nowIdx = -1; }
-
-  let h = '<h1>' + (ds === today ? greet : esc(longDate(ds))) + '</h1>';
-  h += '<p class="sub">' + (ds === today ? esc(longDate(ds)) + ' · ' : '') + (toStart > 0 ? 'старт плана через ' + toStart + ' дн. (' + esc(shortDate(cfg.start)) + ')' : 'неделя ' + w + ' из 12: ' + esc(PLAN[w - 1].t)) + '</p>';
-
+  let nowIdx = V4.nowIndex(list, ds);
+  const nm = S.v4.name ? ', ' + S.v4.name : '';
+  let h = '<h1>' + (ds === today ? greet + esc(nm) : esc(longDate(ds))) + '</h1>';
+  h += '<p class="sub">' + (ds === today ? esc(longDate(ds)) + ' · ' : '') + (toStart > 0 ? 'старт плана через ' + toStart + ' дн.' : 'неделя ' + w + ' из 12: ' + esc(PLAN[w - 1].t)) + '</p>';
   h += '<div class="strip">';
   for (let i = 0; i < 7; i++) {
     const x = addDays(mon, i);
     h += '<button class="day' + (x === ds ? ' on' : '') + (x === today ? ' today' : '') + '" data-act="day" data-v="' + x + '"><b>' + DOW[i] + '</b><span>' + Number(x.slice(8)) + '</span></button>';
   }
   h += '</div>';
-  { const cp = cyclePhase(S.cycle, ds); if (cp) { const off = S.cycle.off[ds]; h += '<div class="card"><div class="tagc">Цикл · день ' + cp.day + '</div>' + (cp.phase === 'pms' ? '<h2 style="margin:4px 0 6px">Мягкий режим</h2><div class="muted">Нагрузок меньше, вечер спокойнее.</div><div class="addrow"><button class="btn g s" data-act="pmsTips">Советы при ПМС</button></div>' : '<h2 style="margin:4px 0 6px">' + esc(PH[cp.phase]) + '</h2><div class="muted">' + esc(PH_SAY[cp.phase]) + '</div>') + (cp.soft ? '<div class="note">' + (off ? 'Сегодня обычный режим.' : 'Расписание на сегодня смягчено: проектов меньше, добавлены тепло и сытный перекус.') + '</div><div class="addrow"><button class="btn g s" data-act="cyOff" data-v="' + ds + '">' + (off ? 'Вернуть мягкий режим' : 'Обычный режим сегодня') + '</button></div>' : '') + '</div>'; } }
-
-  h += '<div class="addrow" style="margin:0 0 14px;flex-wrap:wrap"><button class="btn" data-act="calmGo" data-v="' + ANX_BEST + '">Мне тревожно</button><button class="btn g" data-act="calmMenu">Спокойствие и злость</button></div>';
-  h += '<div class="seg"><button data-act="mode" data-v="0" class="' + (!S.minMode[ds] ? 'on' : '') + '">Обычный день</button><button data-act="mode" data-v="1" class="' + (S.minMode[ds] ? 'on' : '') + '">День без сил</button></div>';
-
-  h += '<div class="card row">' + ring(st.pct) + '<div class="grow"><h2 style="margin:0">Сделано ' + st.done + ' из ' + st.total + '</h2><div class="muted">Отбой сегодня в ' + fmt(B) + (S.minMode[ds] ? ' · показано только главное' : '') + '</div></div></div>';
-
-  if (ds === today) h += bannersCard() + mentorMini(ds) + kitCard(ds) + dayPicks(ds) + fridgeNote();
-
-  if (ds <= today && !S.sleep[ds]) {
+  if (ds === today) h += V4.hero(list, ds);
+  h += '<div class="qa">' + [['calmGo', ANX_BEST, 'lotus', 'Тревожно'], ['napTool', '', 'sleepy', 'Тянет в сон'], ['svNow', '', 'bubble', 'Опрос'], ['addDo', '', 'pencil', 'Новое дело']].map(([a, v, i, t]) => '<button class="qb" data-act="' + a + '" data-v="' + v + '">' + ico(i, { size: 26 }) + '<span>' + t + '</span></button>').join('') + '</div>';
+    h += '<div class="seg"><button data-act="mode" data-v="0" class="' + (!S.minMode[ds] ? 'on' : '') + '">Обычный день</button><button data-act="mode" data-v="1" class="' + (S.minMode[ds] ? 'on' : '') + '">День без сил</button></div>';
+    h += '<div class="card row">' + ring(st.pct) + '<div class="grow"><h2 style="margin:0">Сделано ' + st.done + ' из ' + st.total + '</h2><div class="muted">Отбой сегодня в ' + fmt(B) + (S.minMode[ds] ? ' · показано только главное' : '') + '</div></div></div>';
+  const past = ds === today && nowIdx > 0 ? list.slice(0, nowIdx) : [];
+  const pastDone = past.filter((b) => !b.optional && !b.skipped && d[b.id]).length, pastTot = past.filter((b) => !b.optional && !b.skipped).length;
+  h += '<div class="sect">' + ico('clock', { size: 22 }) + '<h2>Расписание</h2></div>';
+  if (past.length) h += '<button class="pastBar" data-act="showPast">' + (showPast ? 'Скрыть прошедшее' : 'Утро позади: ' + pastDone + ' из ' + pastTot + ' · показать') + '</button>';
+  list.forEach((b, i) => {
+    if (i < nowIdx && !showPast && ds === today) return;
+    const isDone = !!d[b.id];
+    const pst = ds < today || (ds === today && nowMin() > b.t + Math.max(b.dur, 15) && i !== nowIdx);
+    const sess = isSess(b), asg = sess ? (S.pa[ds] || {})[b.id] : null, pr = asg && projById(asg.pid);
+    const title = pr ? pr.name + ' · ' + b.title.replace('Проект: ', '') : b.title;
+    const act = sess ? 'sess' : b.id === 'save' ? 'saveSheet' : 'open';
+    const extra = sess ? (pr ? (asg.task ? '<div class="task">' + esc(asg.task) + '</div>' : '') : '<div class="task pick">Выбрать проект и задачу</div>') : '';
+    h += '<div class="blk c-' + b.cat + (isDone ? ' done' : '') + (i === nowIdx ? ' now' : '') + (pst ? ' past' : '') + (b.skipped ? ' skip' : '') + '" data-act="' + act + '" data-v="' + b.id + '">' +
+      '<div class="tm">' + fmt(b.t) + (b.dur ? '<small>' + fmt(b.t + b.dur) + '</small>' : '') + '</div>' +
+      '<div class="grow">' + (i === nowIdx ? '<div class="nowtag">сейчас</div>' : '') +
+      '<div class="ttl">' + esc(title) + (b.optional ? '<span class="tag">по желанию</span>' : '') + (b.skipped ? '<span class="tag">пропущено</span>' : '') + (b.edited && !b.skipped ? '<span class="tag">изменено</span>' : '') + '</div>' + extra +
+      (b.hint && !sess ? '<div class="hint">' + esc(b.hint) + '</div>' : '') + '</div>' +
+      '<button class="pen" data-act="edit" data-v="' + b.id + '" aria-label="Править">' + ico('pencil', { size: 18 }) + '</button>' +
+      '<button class="chk" data-act="done" data-v="' + b.id + '" aria-label="Отметить">' + icon('check') + '</button></div>';
+  });
+  h += '<div class="addrow"><button class="btn g s" data-act="addDo">+ Добавить дело</button></div>';
+  if (ds === today) { h += '<div class="sect">' + ico('heart', { size: 22 }) + '<h2>Для тебя</h2></div>' + bannersCard() + mentorMini(ds) + kitCard(ds) + dayPicks(ds) + fridgeNote(); }
+  h += '<div class="sect">' + ico('drop', { size: 22 }) + '<h2>Тело</h2></div>';
+    if (ds <= today && !S.sleep[ds]) {
     h += '<div class="card"><h2>Во сколько легла вчера?</h2><div class="addrow"><input type="time" id="sleepIn" value="' + fmt(B > 1440 ? B - 1440 : B) + '"><button class="btn s" data-act="sleep">Записать</button></div></div>';
   } else if (S.sleep[ds]) {
     h += '<div class="card row"><div class="grow"><b>Вчера легла в ' + esc(S.sleep[ds]) + '</b><div class="muted">Записано. Это помогает двигать отбой мягко.</div></div></div>';
@@ -711,30 +733,10 @@ function renderToday() {
   for (let i = 1; i <= 8; i++) h += '<button class="drop' + (i <= wc ? ' on' : '') + '" data-act="water" data-v="' + i + '" aria-label="Стакан ' + i + '">' + icon('drop') + '</button>';
   h += '</div></div>';
 
-  list.forEach((b, i) => {
-    const isDone = !!d[b.id];
-    const past = ds < today || (ds === today && nowMin() > b.t + Math.max(b.dur, 15) && i !== nowIdx);
-    const sess = isSess(b), asg = sess ? (S.pa[ds] || {})[b.id] : null, pr = asg && projById(asg.pid);
-    const title = pr ? pr.name + ' · ' + b.title.replace('Проект: ', '') : b.title;
-    const act = sess ? 'sess' : b.id === 'save' ? 'saveSheet' : 'open';
-    const extra = sess ? (pr ? (asg.task ? '<div class="task">' + esc(asg.task) + '</div>' : '') : '<div class="task pick">Выбрать проект и задачу</div>') : '';
-    h += '<div class="blk c-' + b.cat + (isDone ? ' done' : '') + (i === nowIdx ? ' now' : '') + (past ? ' past' : '') + '" data-act="' + act + '" data-v="' + b.id + '">' +
-      '<div class="tm">' + fmt(b.t) + (b.dur ? '<small>' + fmt(b.t + b.dur) + '</small>' : '') + '</div>' +
-      '<div class="grow">' + (i === nowIdx ? '<div class="nowtag">сейчас</div>' : '') +
-      '<div class="ttl">' + esc(title) + (b.optional ? '<span class="tag">по желанию</span>' : '') + '</div>' + extra +
-      (b.hint && !sess ? '<div class="hint">' + esc(b.hint) + '</div>' : '') + '</div>' +
-      '<button class="chk" data-act="done" data-v="' + b.id + '" aria-label="Отметить">' + icon('check') + '</button></div>';
-  });
-
+    { const cp = cyclePhase(S.cycle, ds); if (cp) { const off = S.cycle.off[ds]; h += '<div class="card"><div class="tagc">Цикл · день ' + cp.day + '</div>' + (cp.phase === 'pms' ? '<h2 style="margin:4px 0 6px">Мягкий режим</h2><div class="muted">Нагрузок меньше, вечер спокойнее.</div><div class="addrow"><button class="btn g s" data-act="pmsTips">Советы при ПМС</button></div>' : '<h2 style="margin:4px 0 6px">' + esc(PH[cp.phase]) + '</h2><div class="muted">' + esc(PH_SAY[cp.phase]) + '</div>') + (cp.soft ? '<div class="note">' + (off ? 'Сегодня обычный режим.' : 'Расписание на сегодня смягчено: проектов меньше, добавлены тепло и сытный перекус.') + '</div><div class="addrow"><button class="btn g s" data-act="cyOff" data-v="' + ds + '">' + (off ? 'Вернуть мягкий режим' : 'Обычный режим сегодня') + '</button></div>' : '') + '</div>'; } }
   view.innerHTML = h;
-  if (ds === today && firstScroll) {
-    firstScroll = false;
-    const el = view.querySelector('.blk.now');
-    if (el) setTimeout(() => el.scrollIntoView({ block: 'center' }), 60);
-  }
+  if (ds === today && firstScroll) { firstScroll = false; window.scrollTo(0, 0); }
 }
-
-/* ---------- Экран «Проекты» ---------- */
 function renderProj() {
   const act = activeProjects(), arch = S.projects.filter((p) => p.arch), parked = S.projects.filter((p) => p.park && !p.arch), mon = mondayOf(todayStr());
   let h = '<h1>Проекты</h1><p class="sub">Вечерние подходы: пн, ср и суббота. Один проект и одна задача за подход.</p>';
@@ -787,7 +789,7 @@ function relSheet() {
 /* ---------- Экран «Наставник» ---------- */
 function renderMentor() {
   const ds = todayStr(), w = weekNumber(ds, cfg.start), tip = dayTip(ds), c = S.ci[ds] || {}, mon = mondayOf(ds), rv = weekReview(mon);
-  let h = '<h1>Наставник</h1><p class="sub">Совет дня, отметки и итоги недели</p>';
+  let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>Итоги и советы</h1><p class="sub">Совет дня, отметки и итоги недели</p>';
   h += '<div class="card tipc"><div class="tagc">' + esc(CAT_NAME[tip.tip.c] || '') + ' · ' + esc(tip.why) + '</div><h2 style="margin:4px 0 6px">' + esc(tip.tip.t) + '</h2><div>' + esc(tip.tip.x) + '</div></div>';
   h += '<div class="card"><h2>Сегодня</h2>';
   const tags = (a) => (a || []).map(feelName).join(', ');
@@ -926,7 +928,7 @@ function renderWeek() {
 /* ---------- Экран «План» ---------- */
 function renderPlan() {
   const w0 = weekNumber(todayStr(), cfg.start), toStart = daysToStart(todayStr(), cfg.start);
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>План на 12 недель</h1><p class="sub">По одному новому шагу. Старые остаются, новые добавляются.</p><div class="card">';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>План на 12 недель</h1><p class="sub">По одному новому шагу. Старые остаются, новые добавляются.</p><div class="card">';
   PLAN.forEach((p) => {
     const cls = toStart > 0 ? '' : p.w < w0 ? 'past' : p.w === w0 ? 'cur' : '';
     const st = addDays(cfg.start, (p.w - 1) * 7);
@@ -951,7 +953,7 @@ const IDEAS = [
 ];
 function renderFood() {
   const mon = mondayOf(todayStr()), p = S.prep[mon] || {};
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Еда</h1><p class="sub">Простые заготовки на неделю по твоим вкусам.</p>';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Еда</h1><p class="sub">Простые заготовки на неделю по твоим вкусам.</p>';
   h += '<div class="card"><h2>Люблю</h2><div class="chips">' + ['паста', 'пицца', 'суши и роллы', 'бургеры', 'салаты', 'сырники и блины', 'плов', 'пельмени', 'котлеты', 'хинкали', 'сэндвичи', 'выпечка', 'фрукты', 'сыр', 'шоколад', 'мороженое', 'овощи'].map((x) => '<span class="chip">' + x + '</span>').join('') +
     '</div><h2 style="margin-top:14px">Не берём</h2><div class="chips">' + ['лук', 'чеснок', 'кинза', 'острое', 'рыба', 'супы', 'брокколи', 'нут', 'чечевица', 'перловка'].map((x) => '<span class="chip no">' + x + '</span>').join('') + '</div></div>';
   { const wm = weekMenu(mon, cfg.lesson ? cfg.lesson.dow : 4), names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -1022,7 +1024,7 @@ let cyArm = false;
 function renderCycle() {
   const c = S.cycle, ds = todayStr(), cp = cyclePhase(c, ds);
   const lastStart = [...c.starts].sort().slice(-1)[0] || '';
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Цикл</h1><p class="sub">Расписание подстраивается под фазы. Данные хранятся только на этом телефоне и не попадают на GitHub.</p>';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Цикл</h1><p class="sub">Расписание подстраивается под фазы. Данные хранятся только на этом телефоне и не попадают на GitHub.</p>';
   if (cp) {
     h += '<div class="card"><div class="tagc">Сегодня · день ' + cp.day + ' из ' + cp.L + '</div><h2 style="margin:4px 0 6px">' + esc(PH[cp.phase]) + '</h2><div class="muted">' + esc(PH_SAY[cp.phase]) + '</div>' +
       '<div class="kv"><span>Следующие месячные</span><span>≈ ' + esc(shortDate(cp.nextStart)) + '</span></div><div class="kv"><span>Овуляция</span><span>≈ ' + esc(shortDate(addDays(cp.nextStart, -14))) + '</span></div>' +
@@ -1045,7 +1047,7 @@ function renderCycle() {
 function renderLook() {
   const L = S.look, ds = todayStr(), mon = mondayOf(ds), cur = L.day[mon] || 0;
   const plan = planMonths(L.items, L.budget);
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Образ</h1><p class="sub">Красиво, но спокойно: одно платье в неделю, мягкий уход и бюджет без нервов.</p>';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Образ</h1><p class="sub">Красиво, но спокойно: одно платье в неделю, мягкий уход и бюджет без нервов.</p>';
   h += '<div class="card"><h2>Платье недели</h2><div class="muted" style="margin-bottom:8px">В какой день наденешь платье на этой неделе?</div><div class="chips">' +
     DOW.slice(0, 6).map((x, i) => '<button class="chip pick' + (cur === i + 1 ? ' on' : '') + '" data-act="lookDay" data-v="' + (i + 1) + '">' + x + '</button>').join('') + '</div>';
   if (cur) h += '<div class="note"><b>' + DOW[cur - 1] + ':</b> ' + esc(outfit(mon, addDays(mon, cur - 1))) + '</div><div class="muted">Образ меняется каждую неделю. Утром в этот день блок «Сборы» напомнит про платье.</div>';
@@ -1068,7 +1070,7 @@ function renderLook() {
 function renderMoney() {
   const m = S.money, ds = todayStr(), st = moneyStats(m, ds), say = moneySay(st, m);
   const inp = (id, label, v, ph) => '<div class="muted" style="margin:10px 0 4px">' + label + '</div><input type="number" inputmode="numeric" id="' + id + '" value="' + (v || '') + '" placeholder="' + (ph || '') + '">';
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Деньги</h1><p class="sub">Две цифры раз в месяц, больше ничего считать не нужно.</p>';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Деньги</h1><p class="sub">Две цифры раз в месяц, больше ничего считать не нужно.</p>';
   h += '<div class="card"><h2>Этот месяц</h2><div class="kv"><span>Цель в месяц</span><span>' + rub(m.target) + '</span></div><div class="kv"><span>Пришло</span><span>' + rub(st.cur) + '</span></div><div class="pbar"><i style="width:' + st.pct + '%"></i></div>' + say.map((x) => '<div class="note">' + esc(x) + '</div>').join('') + '</div>';
   if (m.goal > 0) h += '<div class="card"><h2>Копилка на квартиру</h2><div class="kv"><span>Накоплено</span><span>' + rub(m.saved) + '</span></div><div class="kv"><span>Цель</span><span>' + rub(m.goal) + '</span></div><div class="pbar"><i style="width:' + st.savePct + '%"></i></div></div>';
   if (m.goal > 0) { const ap = aptPlan(m, 24); h += '<div class="card"><h2>План по квартире</h2><div class="muted" style="margin-bottom:8px">Цель копилки это первый взнос: обычно около 20% цены, для 4–5 млн это 0,8–1 млн.</div><div class="kv"><span>Осталось накопить</span><span>' + rub(ap.left) + '</span></div>' + (m.monthly > 0 ? '<div class="kv"><span>Откладываю в месяц</span><span>' + rub(m.monthly) + '</span></div>' + (ap.atPace ? '<div class="kv"><span>В таком темпе</span><span>' + ap.atPace + ' мес.</span></div>' : '') : '') + (ap.left > 0 ? '<div class="kv"><span>Чтобы за 24 месяца</span><span>' + rub(ap.need) + ' в месяц</span></div><div class="note">Это арифметика, а не оценка. Двигать можно срок, сумму или источники, например помощь семьи.</div>' : '<div class="note">Цель копилки достигнута.</div>') + '</div>'; }
@@ -1088,7 +1090,7 @@ function renderMoney() {
 /* ---------- Экран «Здоровье» ---------- */
 function renderHealth() {
   const today = todayStr();
-  let h = '<button class="back" data-act="back">‹ Ещё</button><h1>Здоровье</h1><p class="sub">Каждое дело разбито на шаги. Отмечай по одному, срок можно поставить для себя.</p>';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Здоровье</h1><p class="sub">Каждое дело разбито на шаги. Отмечай по одному, срок можно поставить для себя.</p>';
   S.health.forEach((x) => {
     const pr = healthProgress(x), od = healthOverdue(x, today);
     h += '<div class="card"><div class="row"><div class="grow"><h2 style="margin:0">' + esc(x.name) + '</h2><div class="muted">' + pr.d + ' из ' + pr.n + ' шагов</div></div><span class="muted">' + pr.pct + '%</span></div><div class="pbar"><i style="width:' + pr.pct + '%"></i></div>';
@@ -1111,11 +1113,11 @@ async function pushState() {
   return { ok: true, text: 'Не включены. Нажми «Включить напоминания».', sub: null };
 }
 async function renderMore() {
-  let h = '<h1>Ещё</h1><p class="sub">Мой ритм · ' + VERSION + '</p><div class="card"><h2>Разделы</h2><div class="addrow" style="flex-wrap:wrap;margin-top:0"><button class="btn g" data-act="goFood">Еда на неделю</button><button class="btn g" data-act="goPlan">План на 12 недель</button><button class="btn g" data-act="goMoney">Деньги</button><button class="btn g" data-act="goHealth">Здоровье</button><button class="btn g" data-act="goCycle">Цикл</button><button class="btn g" data-act="goLook">Образ</button><button class="btn g" data-act="goTaste">Подборки</button><button class="btn g" data-act="goFridge">Холодильник</button><button class="btn g" data-act="goSmoke">Без вейпа</button></div></div><div class="card"><h2>Напоминания</h2><div class="muted" id="pushTxt">Проверяю…</div>' +
+  let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>Защита и копия</h1><p class="sub">Мой ритм · ' + VERSION + '</p><div class="card"><h2>Напоминания</h2><div class="muted" id="pushTxt">Проверяю…</div>' +
     '<div class="addrow" style="flex-wrap:wrap"><button class="btn s" data-act="pushOn">Включить напоминания</button><button class="btn g s" data-act="pushTest">Тест</button></div><div id="pushSub"></div></div>';
   { const lk = lockCfg();
     h += '<div class="card"><h2>Защита</h2><div class="muted" style="margin-bottom:8px">' + (lk ? 'Блокировка включена' + (lk.cred ? ': Face ID или PIN.' : ': PIN.') : 'Можно закрывать приложение PIN-кодом и Face ID. Это защита экрана от любопытных глаз, а не шифрование данных.') + '</div><div class="addrow">' + (lk ? '<button class="btn g s" data-act="lockOffAsk">Выключить</button>' : '<button class="btn s" data-act="lockSetup">Включить блокировку</button>') + '</div></div>';
-    h += '<div class="card"><h2>Календарь, обои, мини-экран</h2><div class="muted" style="margin-bottom:8px">Виджетов у приложения нет, поэтому три замены.</div><div class="addrow" style="flex-wrap:wrap;margin-top:0"><button class="btn s" data-act="icsGo">Расписание в календарь</button><button class="btn s" data-act="wallGo">Обои на сегодня</button><button class="btn g s" data-act="miniInfo">Мини-экран</button></div></div>'; }
+    h += '<div class="card"><h2>Календарь, обои, мини-экран</h2><div class="muted" style="margin-bottom:8px">Свой виджет: Меню → Виджет. Здесь: календарь, обои и мини-экран.</div><div class="addrow" style="flex-wrap:wrap;margin-top:0"><button class="btn s" data-act="icsGo">Расписание в календарь</button><button class="btn s" data-act="wallGo">Обои на сегодня</button><button class="btn g s" data-act="miniInfo">Мини-экран</button></div></div>'; }
   h += '<div class="card"><h2>Моё расписание</h2>' +
     [['Старт плана', shortDate(cfg.start)], ['Подъём в будни', cfg.wake], ['Выезд на работу', cfg.leave], ['Работа', cfg.workStart + '–' + cfg.workEnd], ['Обед', cfg.lunch], ['Ужин', cfg.dinner], ['Занятие', 'чт ' + cfg.lesson.time + ', ' + cfg.lesson.minutes + ' мин'], ['Проектные вечера', 'пн, ср и суббота']]
       .map(([a, b]) => '<div class="kv"><span>' + esc(a) + '</span><span>' + esc(b) + '</span></div>').join('') +
@@ -1161,11 +1163,12 @@ async function pushTest() {
 async function render() {
   checkBadges(); setBadge();
   if (MINI) { renderMini(); return; }
-  const cur = ['plan', 'food', 'money', 'health', 'cycle', 'look', 'smoke', 'fridge', 'apts', 'taste'].includes(tab) ? 'more' : tab;
+  const cur = ['today', 'week', 'friend'].includes(tab) ? tab : 'menu';
   if (document.body && document.body.dataset) document.body.dataset.v = tab;
   applyMood();
   tabsEl.innerHTML = TABS.map(([k, t]) => '<button class="tab' + (k === cur ? ' on' : '') + '" data-tab="' + k + '" aria-label="' + t + '" title="' + t + '">' + icon(k) + '<span>' + t + '</span></button>').join('');
-  if (tab === 'today') renderToday(); else if (tab === 'week') renderWeek(); else if (tab === 'proj') renderProj(); else if (tab === 'mentor') renderMentor(); else if (tab === 'smoke') renderSmoke(); else if (tab === 'fridge') renderFridge(); else if (tab === 'apts') renderApts(); else if (tab === 'taste') renderTaste(); else if (tab === 'plan') renderPlan(); else if (tab === 'food') renderFood(); else if (tab === 'money') renderMoney(); else if (tab === 'health') renderHealth(); else if (tab === 'cycle') renderCycle(); else if (tab === 'look') renderLook(); else await renderMore();
+  if (V4.isPage(tab)) { view.innerHTML = V4.pageOf(tab); } else if (tab === 'today') renderToday(); else if (tab === 'week') renderWeek(); else if (tab === 'proj') renderProj(); else if (tab === 'mentor') renderMentor(); else if (tab === 'smoke') renderSmoke(); else if (tab === 'fridge') renderFridge(); else if (tab === 'apts') renderApts(); else if (tab === 'taste') renderTaste(); else if (tab === 'plan') renderPlan(); else if (tab === 'food') renderFood(); else if (tab === 'money') renderMoney(); else if (tab === 'health') renderHealth(); else if (tab === 'cycle') renderCycle(); else if (tab === 'look') renderLook(); else await renderMore();
+  V4.after(tab); V4.widgetSync();
 }
 setTimeout(checkPushStale, 1500);
 tabsEl.addEventListener('click', (e) => {
@@ -1183,17 +1186,19 @@ view.addEventListener('input', (e) => {
 });
 const HAP = new Set(['done', 'water', 'calmNext', 'calmGo', 'fridgeAdd', 'smZero', 'miniWater', 'miniDone', 'taskadd', 'aptAdd', 'ghSave']);
 async function onClick(e) {
-  const el = e.target.closest('[data-act]'); if (!el) return;
+  const el = e.target.closest('[data-act]');
+  if (!el) { const n = e.target.closest && e.target.closest('div.muted, p.muted, .note, .hint, .heroHint'); if (n && n.classList && !e.target.closest('button, a, input, textarea, label, .chip')) n.classList.toggle('x'); return; }
   const act = el.dataset.act, v = el.dataset.v;
   if (HAP.has(act)) haptic();
+  if (await V4.act(act, v, el)) return;
   const val = (id) => { const x = document.getElementById(id); return x ? x.value : ''; };
   const redraw = () => { const y = window.scrollY; const r = render(); Promise.resolve(r).then(() => window.scrollTo(0, y)); };
   switch (act) {
     case 'day': sel = v; firstScroll = v === todayStr(); render(); window.scrollTo(0, 0); break;
     case 'mode': S.minMode[sel] = v === '1'; save(); redraw(); break;
     case 'open': el.classList.toggle('open'); break;
-    case 'done': e.stopPropagation(); { const d = (S.done[sel] = S.done[sel] || {}); d[v] = !d[v]; save(); redraw(); } break;
-    case 'water': { const c = S.water[sel] || 0; S.water[sel] = Number(v) === c ? c - 1 : Number(v); save(); redraw(); } break;
+    case 'done': e.stopPropagation(); { const d = (S.done[sel] = S.done[sel] || {}); d[v] = !d[v]; save(); if (d[v]) { const st = dayStats(sel); V4.playEv(st.total && st.done === st.total ? 'cheer' : 'done'); } redraw(); } break;
+    case 'water': { const c = S.water[sel] || 0; S.water[sel] = Number(v) === c ? c - 1 : Number(v); save(); V4.playEv('water'); redraw(); } break;
     case 'sleep': { const t = document.getElementById('sleepIn').value; if (t) { S.sleep[sel] = t; save(); redraw(); toast('Записано'); } } break;
     case 'task': { const t = S.tasks.find((x) => x.id === v); if (t) t.done = !t.done; save(); redraw(); } break;
     case 'taskdel': S.tasks = S.tasks.filter((x) => x.id !== v); save(); redraw(); break;
@@ -1211,7 +1216,7 @@ async function onClick(e) {
     case 'restore': document.getElementById('bk').style.display = 'block'; document.getElementById('bkGo').style.display = 'inline-block'; break;
     case 'restoreGo': try { const o = JSON.parse(document.getElementById('bk').value); S = { ...S, ...o }; fixS(); save(); toast('Восстановлено'); render(); } catch (err) { toast('Не получилось прочитать копию'); } break;
     case 'sclose': closeSheet(); break;
-    case 'back': tab = 'more'; window.scrollTo(0, 0); render(); break;
+    case 'back': tab = 'menu'; window.scrollTo(0, 0); render(); break;
     case 'goPlan': closeSheet(); tab = 'plan'; window.scrollTo(0, 0); render(); break;
     case 'goFood': tab = 'food'; window.scrollTo(0, 0); render(); break;
     case 'goProj': closeSheet(); tab = 'proj'; window.scrollTo(0, 0); render(); break;
@@ -1413,6 +1418,20 @@ async function onClick(e) {
 view.addEventListener('click', onClick);
 sheetEl.addEventListener('click', onClick);
 
+/* ---------- ver. 4.0: связь с новыми модулями ---------- */
+V4.initV4({
+  get S() { return S; }, save, esc, pad, fmt, openSheet, closeSheet, toast, copy, haptic,
+  redraw: () => { const y = window.scrollY; Promise.resolve(render()).then(() => window.scrollTo(0, y)); },
+  sel: () => sel, todayStr, nowMin, addDays, shortDate, dayList, dayStats, allBlocks: (ds) => buildDay(ds, cfg, ctxFor(ds)),
+  setTab: (t) => { tab = t; privOpen = false; window.scrollTo(0, 0); render(); }, version: VERSION, mini: MINI,
+  calmMenu, calmStart: (k) => V4.calm(k, 0), exById, exercises: () => EXERCISES, stopTimer: () => { clearInterval(shTimer); shTimer = null; },
+  togglePast: () => { showPast = !showPast; render(); }, gh: ghCfg, pushFile, ask: (q) => askLocal(q), report: (q) => claudeReport(q).slice(0, 1800),
+  emo: (id) => EMO[id] || '•', colors: (ds) => colorOfDay(ds),
+  outfitText: () => { const T = S.taste, o = outfitOf(todayStr(), T.ctx.where === 'выходной' ? 'выходной' : T.ctx.where, T.ctx.temp); return o.base + (o.outer ? ', сверху ' + o.outer : '') + '. Цвета дня: ' + o.colors + '.'; },
+  songs: (ctxName) => { const no = (S.taste.no.music || []).map((x) => x.toLowerCase()), arr = (MUSIC[ctxName] || MUSIC.утро).filter((x) => !no.some((n) => x.toLowerCase().includes(n))), d = new Date(), k = (d.getDate() * 7 + d.getHours()) % arr.length; return [0, 1, 2].map((i) => arr[(k + i * 3) % arr.length]).map((t) => ({ t, href: tLinks.music(t) })); }
+});
+V4.holdBind();
+
 /* ---------- Запуск ---------- */
 async function boot() {
   if (lockCfg()) lockDraw();
@@ -1421,6 +1440,7 @@ async function boot() {
   }
   if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('sw.js'); } catch (e) {} }
   await render();
+  setTimeout(() => V4.maybeSurvey(), 1200);
   document.addEventListener('pointerdown', unlockAudio, { once: true });
   refreshWeather();
   setInterval(() => {
@@ -1431,7 +1451,7 @@ async function boot() {
     if (document.visibilityState === 'hidden' && lockCfg()) { hiddenAt = Date.now(); lockDraw(); }
     if (document.visibilityState === 'visible' && lockCfg() && Date.now() - hiddenAt < 30000) lockHide();
     if (document.visibilityState === 'visible') refreshWeather();
-    if (document.visibilityState === 'visible') { sel = todayStr(); firstScroll = true; render(); }
+    if (document.visibilityState === 'visible') { sel = todayStr(); firstScroll = true; render(); setTimeout(() => V4.maybeSurvey(), 800); }
   });
 }
 boot();

@@ -31,16 +31,18 @@ export const FILMS = [
   'Брат 2', 'Самая обаятельная и привлекательная', 'Бриллиантовая рука', 'Кавказская пленница', 'Иван Васильевич меняет профессию', 'Ёлки', 'Девчата', 'Один дома 2'
 ];
 /* ---------- Музыка по ситуации: только исполнители и саундтреки ---------- */
-export const MUSIC_CTX = [['утро', 'Утро'], ['вечер', 'Вечер'], ['тренировка', 'Тренировка'], ['уборка', 'Уборка'], ['готовка', 'Готовка'], ['проекты', 'Проекты'], ['грусть', 'Когда грустно'], ['спокойствие', 'Спокойствие']];
+export const MUSIC_CTX = [['утро', 'Утро'], ['бодрость', 'Взбодриться'], ['вечер', 'Вечер'], ['тренировка', 'Тренировка'], ['уборка', 'Уборка'], ['готовка', 'Готовка'], ['проекты', 'Проекты'], ['грусть', 'Когда грустно'], ['спокойствие', 'Спокойствие']];
+/* Конкретные песни: «Название — исполнитель». Без рэпа, инди, джаза, шансона и k-pop */
 export const MUSIC = {
-  утро: ['Miley Cyrus', 'Dua Lipa', 'Katy Perry', 'Rihanna', 'Ava Max', 'Imagine Dragons', 'Pink', 'Britney Spears', 'Lady Gaga'],
-  вечер: ['Кино', 'Би-2', 'Adele', 'Lana Del Rey', 'Coldplay', 'The Weeknd', 'Sia', 'Billie Eilish', 'Birdy'],
-  тренировка: ['Linkin Park', 'Lady Gaga', 'The Weeknd', 'Dua Lipa', 'Rihanna', 'Pink', 'Imagine Dragons', 'Avicii', 'Evanescence'],
-  уборка: ['Miley Cyrus', 'Britney Spears', 'Katy Perry', 'Maroon 5', 'ABBA', 'Queen', 'Bruno Mars', 'Avril Lavigne', 'Lady Gaga'],
-  готовка: ['Maroon 5', 'Adele', 'Coldplay', 'Bruno Mars', 'Sade', 'Norah Jones', 'Ed Sheeran', 'Sia', 'Кино'],
-  проекты: ['саундтреки к «Гарри Поттеру»', 'Hans Zimmer', 'Ludovico Einaudi', 'Howard Shore', 'Yiruma', 'Max Richter', 'Alexandre Desplat', 'саундтреки к «Властелину колец»', 'Ramin Djawadi'],
-  грусть: ['Linkin Park', 'Би-2', 'Кино', 'Adele', 'Lady Gaga', 'Miley Cyrus', 'Evanescence', 'Lana Del Rey', 'Сплин'],
-  спокойствие: ['Кино: «Спокойная ночь»', 'Ludovico Einaudi', 'Yiruma', 'Sade', 'Norah Jones', 'Adele', 'Hans Zimmer', 'Coldplay', 'Birdy']
+  утро: ['Flowers — Miley Cyrus', 'Levitating — Dua Lipa', 'Dance the Night — Dua Lipa', 'Just Dance — Lady Gaga', 'Firework — Katy Perry', 'Espresso — Sabrina Carpenter', 'Party in the U.S.A. — Miley Cyrus', 'Roar — Katy Perry', 'Can\'t Stop the Feeling — Justin Timberlake'],
+  бодрость: ['Blinding Lights — The Weeknd', 'Don\'t Start Now — Dua Lipa', 'Houdini — Dua Lipa', 'Poker Face — Lady Gaga', 'Starboy — The Weeknd', 'Can\'t Feel My Face — The Weeknd', 'Faint — Linkin Park', 'Good as Hell — Lizzo', 'Abracadabra — Lady Gaga'],
+  вечер: ['Группа крови — Кино', 'Звезда по имени Солнце — Кино', 'Полковнику никто не пишет — Би-2', 'Серебро — Би-2', 'Save Your Tears — The Weeknd', 'Die For You — The Weeknd', 'Shallow — Lady Gaga и Bradley Cooper', 'Midnight Sky — Miley Cyrus', 'Skyfall — Adele'],
+  тренировка: ['Numb — Linkin Park', 'What I\'ve Done — Linkin Park', 'Heavy Is the Crown — Linkin Park', 'The Emptiness Machine — Linkin Park', 'Bad Romance — Lady Gaga', 'Starboy — The Weeknd', 'Houdini — Dua Lipa', 'Bring Me to Life — Evanescence', 'Thunder — Imagine Dragons'],
+  уборка: ['Party in the U.S.A. — Miley Cyrus', 'Applause — Lady Gaga', 'Hot N Cold — Katy Perry', 'Toxic — Britney Spears', 'Shake It Off — Taylor Swift', 'Just Dance — Lady Gaga', 'Levitating — Dua Lipa', 'Uptown Funk — Bruno Mars', 'Dynamite — Taio Cruz'],
+  готовка: ['Die With a Smile — Lady Gaga и Bruno Mars', 'Always Remember Us This Way — Lady Gaga', 'A Thousand Years — Christina Perri', 'Locked Out of Heaven — Bruno Mars', 'Perfect — Ed Sheeran', 'Photograph — Ed Sheeran', 'Skyfall — Adele', 'Viva la Vida — Coldplay', 'Группа крови — Кино'],
+  проекты: ['Time — Hans Zimmer', 'Cornfield Chase — Hans Zimmer', 'Experience — Ludovico Einaudi', 'Nuvole Bianche — Ludovico Einaudi', 'Hedwig\'s Theme — John Williams', 'Concerning Hobbits — Howard Shore', 'Comptine d\'un autre été — Yann Tiersen', 'Now We Are Free — Hans Zimmer и Lisa Gerrard', 'He\'s a Pirate — Klaus Badelt'],
+  грусть: ['Numb — Linkin Park', 'In the End — Linkin Park', 'Lost — Linkin Park', 'Wrecking Ball — Miley Cyrus', 'Someone Like You — Adele', 'Кукушка — Кино', 'Моя любовь — Би-2', 'The Scientist — Coldplay', 'Always Remember Us This Way — Lady Gaga'],
+  спокойствие: ['Спокойная ночь — Кино', 'River Flows in You — Yiruma', 'Nuvole Bianche — Ludovico Einaudi', 'Comptine d\'un autre été — Yann Tiersen', 'Cornfield Chase — Hans Zimmer', 'Ocean Eyes — Billie Eilish', 'Photograph — Ed Sheeran', 'Experience — Ludovico Einaudi', 'Fix You — Coldplay']
 };
 /* ---------- Книги: без биографий, истории и манги ---------- */
 export const BOOKS = [
@@ -67,13 +69,13 @@ export const colorOfDay = (ds) => COLORS[hash('c' + ds) % COLORS.length];
 /* ---------- Образ дня ---------- */
 export const WHERE = [['работа', 'Работа'], ['встреча', 'Встреча'], ['подруги', 'С подругами'], ['выходной', 'Выходной'], ['дом', 'Дома']];
 export const TEMP = [['тепло', 'Тепло'], ['прохладно', 'Прохладно'], ['холодно', 'Холодно'], ['дождь', 'Дождь']];
-const OUT = { тепло: [], прохладно: ['кожаная куртка', 'тренч', 'кардиган'], холодно: ['пальто', 'тёплая куртка', 'пальто и шарф'], дождь: ['тренч и ботинки', 'куртка с капюшоном и ботинки'] };
+const OUT = { тепло: [], прохладно: ['кожаная куртка', 'тренч', 'длинный кардиган'], холодно: ['пальто', 'тёплая куртка', 'пальто и шарф'], дождь: ['тренч и ботинки', 'куртка с капюшоном и ботинки'] };
 const LOOK = {
-  работа: { тепло: ['платье до колена и балетки', 'юбка-миди, тонкий свитер и балетки', 'брюки, рубашка и лоферы'], прохладно: ['платье и колготки, ботинки', 'брюки, свитер и туфли на невысоком каблуке', 'юбка, свитер и ботинки'], холодно: ['платье-свитер, колготки, сапоги', 'брюки, тёплый свитер и ботинки', 'юбка-миди, свитер и сапоги'], дождь: ['брюки, свитер и ботинки', 'платье-свитер, колготки, ботинки'] },
-  встреча: { тепло: ['платье и туфли на каблуке', 'юбка, топ и балетки'], прохладно: ['платье, ботинки или туфли', 'джинсы, свитер и каблуки'], холодно: ['платье-свитер, сапоги и платок', 'джинсы, тёплый свитер, ботинки'], дождь: ['джинсы, свитер, ботинки'] },
-  подруги: { тепло: ['яркое платье и кеды', 'юбка, топ и каблуки'], прохладно: ['стильный костюм и туфли', 'платье и ботинки'], холодно: ['костюм, водолазка и сапоги', 'платье-свитер, колготки, сапоги'], дождь: ['костюм и ботинки'] },
-  выходной: { тепло: ['платье и кеды', 'джинсы, футболка и кеды'], прохладно: ['джинсы, свитер и кеды', 'лосины, худи и кеды'], холодно: ['джинсы, свитер, ботинки', 'худи, лосины, ботинки'], дождь: ['худи, джинсы, ботинки'] },
-  дом: { тепло: ['футболка и мягкие шорты', 'лёгкое платье для дома'], прохладно: ['худи и лосины', 'мягкий свитер и штаны'], холодно: ['худи, тёплые носки, мягкие штаны', 'свитер и тёплые носки'], дождь: ['худи и лосины, носки'] }
+  работа: { тепло: ['платье до колена и балетки', 'юбка-миди, тонкий свитер и балетки', 'прямые брюки, тонкий свитер и балетки'], прохладно: ['платье и колготки, ботинки', 'брюки, свитер и туфли на невысоком каблуке', 'юбка, свитер и ботинки'], холодно: ['платье-свитер, колготки, сапоги', 'брюки, тёплый свитер и ботинки', 'юбка-миди, свитер и сапоги'], дождь: ['брюки, свитер и ботинки', 'платье-свитер, колготки, ботинки'] },
+  встреча: { тепло: ['платье и туфли на каблуке', 'юбка, облегающий свитер и балетки'], прохладно: ['платье, ботинки или туфли', 'джинсы, свитер и каблуки'], холодно: ['платье-свитер, сапоги и платок', 'джинсы, тёплый свитер, ботинки'], дождь: ['джинсы, свитер, ботинки'] },
+  подруги: { тепло: ['яркое платье и кроссовки', 'юбка, футболка и каблуки'], прохладно: ['джинсы, свитер и каблуки', 'платье и ботинки'], холодно: ['платье-свитер, колготки, сапоги', 'юбка, свитер и сапоги'], дождь: ['джинсы, худи и ботинки'] },
+  выходной: { тепло: ['платье и кроссовки', 'джинсы, футболка и кроссовки'], прохладно: ['джинсы, свитер и кроссовки', 'леггинсы, худи и кроссовки'], холодно: ['джинсы, свитер, ботинки', 'худи, леггинсы, ботинки'], дождь: ['худи, джинсы, ботинки'] },
+  дом: { тепло: ['футболка и мягкие шорты', 'лёгкое платье для дома'], прохладно: ['худи и леггинсы', 'мягкий свитер и штаны'], холодно: ['худи, тёплые носки, мягкие штаны', 'свитер и тёплые носки'], дождь: ['худи и леггинсы, носки'] }
 };
 export function outfitOf(ds, where = 'работа', temp = 'прохладно') {
   const list = (LOOK[where] || LOOK.работа)[temp] || (LOOK[where] || LOOK.работа).прохладно, base = list[hash(ds + where + temp) % list.length];
@@ -149,5 +151,5 @@ export function mark(T, kind, name, how) {
 }
 export const links = {
   series: (n) => 'https://www.kinopoisk.ru/index.php?kp_query=' + encodeURIComponent(n), films: (n) => 'https://www.kinopoisk.ru/index.php?kp_query=' + encodeURIComponent(n),
-  music: (n) => 'https://music.yandex.ru/search?text=' + encodeURIComponent(n.replace(/^.*?«|».*$/g, '')), books: (n) => 'https://www.litres.ru/search/?q=' + encodeURIComponent(n.split(',')[0])
+  music: (n) => 'https://music.yandex.ru/search?text=' + encodeURIComponent(n.replace(/ и /g, ' ').replace(/[«»]/g, '')), books: (n) => 'https://www.litres.ru/search/?q=' + encodeURIComponent(n.split(',')[0])
 };

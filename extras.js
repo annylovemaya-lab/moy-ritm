@@ -201,6 +201,22 @@ export async function pushFridge(items) {
   return { ok: false, msg: 'Не удалось записать, попробуй ещё раз' };
 }
 
+export async function pushFile(path, obj, msg) {
+  const c = ghCfg(); if (!c.token || !c.repo) return { ok: false, msg: 'Нет токена или репозитория' };
+  const url = 'https://api.github.com/repos/' + c.repo + '/contents/' + path;
+  const H = { Authorization: 'Bearer ' + c.token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  const body = JSON.stringify(obj);
+  for (let k = 0; k < 2; k++) {
+    let sha; try { const g = await fetch(url, { headers: H, cache: 'no-store' }); if (g.ok) sha = (await g.json()).sha; else if (g.status !== 404) return { ok: false, msg: g.status === 401 ? 'Токен не подошёл (401)' : 'GitHub ответил ' + g.status }; } catch (e) { return { ok: false, msg: 'Нет сети' }; }
+    try {
+      const r = await fetch(url, { method: 'PUT', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg || 'Данные', content: btoa(unescape(encodeURIComponent(body))), ...(sha ? { sha } : {}) }) });
+      if (r.ok) return { ok: true, msg: 'Отправлено' };
+      if (r.status !== 409 && r.status !== 422) return { ok: false, msg: 'GitHub ответил ' + r.status };
+    } catch (e) { return { ok: false, msg: 'Нет сети' }; }
+  }
+  return { ok: false, msg: 'Не удалось записать' };
+}
+
 /* ---------- 8. Погода (Open-Meteo, без ключа): по геопозиции или по названию города ---------- */
 export const getPos = () => new Promise((res, rej) => {
   if (typeof navigator === 'undefined' || !navigator.geolocation) return rej(new Error('Геопозиция недоступна'));
