@@ -1,12 +1,12 @@
 import { VERSION, EMO, PLAN, buildDay, fmt, parseHM, dayOfWeek, addDays, weekNumber, daysToStart, bedtime } from './core.js';
 import { TIPS, WEEK_TOPICS, pick, byTopic } from './tips.js';
 import { TASTE0, MONTH_BOOKS, SERIES, FILMS, MUSIC, MUSIC_CTX, BOOKS, GIFTS, EVENING, WHERE, TEMP, FACES, FACE_NOTE, HAIR, hairFor, SKIN, NAILS, subFor, colorOfDay, outfitOf, pick3, mark as tMark, links as tLinks, norm as tNorm } from './tastes.js';
-import { weekMenu, weekShopping, mondayOfDs } from './menu.js';
+import { weekMenu, weekShopping, mondayOfDs, weekendMeals, weekendShopping, BREAKFASTS, LUNCHES } from './menu.js';
 import * as V4 from './v4.js';
 import { ico } from './icons.js';
 import { parseListing, shrinkImage, putPhoto, getPhoto, delPhoto, askLocal, icsFromEvents, drawWallpaper, haptic, beep, unlockAudio, lockCfg, setPin, checkPin, bioSupported, bioRegister, bioCheck, lockOff, ghCfg, ghSave, guessRepo, pushFridge, getPos, geocode, fetchWeather, wxText, tempClass , pushFile } from './extras.js';
 const MINI = typeof location !== 'undefined' && /[?&]mini=1/.test(location.search || '');
-import { outfit, planMonths, LOOK_ITEMS0, LOOK_STEPS0, REL_Q3, badgeState, CYCLE0, cyclePhase, PH, PH_SAY, PH_NOTE, SYM, phaseEnergy, ENERGY, FEEL, energyValue, moodValue, feelName, feelReply, topFeels, PLAN_OPTS, planOf, needsCheckpoint, CP_CHOICES, MAX_ACTIVE, REL_Q1, REL_Q2, relAdvice, relPattern, relName, MONEY0, monthKey, moneyStats, moneySay, rub, HEALTH0, HEALTH_ADD, CHECK_ADD, EXERCISES, exById, exTotal, ANX_BEST, todayKit, fridgeSorted, fridgeDays, fridgeSay, recipeMatches, INCOME_IDEAS, aptPlan, healthProgress, healthNext, healthOverdue } from './mentor2.js';
+import { outfit, planMonths, LOOK_ITEMS0, LOOK_STEPS0, REL_Q3, badgeState, CYCLE0, cyclePhase, PH, PH_SAY, PH_NOTE, SYM, phaseEnergy, ENERGY, FEEL, energyValue, moodValue, feelName, feelReply, topFeels, PLAN_OPTS, planOf, needsCheckpoint, CP_CHOICES, MAX_ACTIVE, REL_Q1, REL_Q2, relAdvice, relPattern, relName, MONEY0, monthKey, moneyStats, moneySay, rub, HEALTH0, HEALTH_ADD, CHECK_ADD, EXERCISES, exById, exTotal, ANX_BEST, todayKit, fridgeSorted, fridgeDays, fridgeSay, recipeMatches, RECIPES, INCOME_IDEAS, aptPlan, healthProgress, healthNext, healthOverdue } from './mentor2.js';
 
 const VAPID_PUBLIC = 'BFy_KCTONT2KbTEvVpemnBLUFXrCHJ1q_8DfK7YDW4EY55hwVV9cGTJpZ6_GKJNPZ37ilVnk_te1BpojNKgWTs4';
 const KEY = 'moy_ritm_v1';
@@ -78,7 +78,7 @@ const IC = {
 const icon = (k) => '<svg viewBox="0 0 24 24">' + IC[k] + '</svg>';
 IC.friend = '<path d="M4 6.5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-6l-4.5 4v-4H7a3 3 0 0 1-3-3z"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>';
 IC.menu = '<rect x="4" y="4" width="6.5" height="6.5" rx="2.2"/><rect x="13.500" y="4" width="6.5" height="6.5" rx="2.2"/><rect x="4" y="13.500" width="6.5" height="6.5" rx="2.2"/><rect x="13.500" y="13.500" width="6.5" height="6.5" rx="2.2"/>';
-const TABS = [['today', 'Сейчас'], ['week', 'План'], ['friend', 'Подружка'], ['menu', 'Меню']];
+const TABS_DEFAULT = ['today', 'week', 'friend'];
 IC.week = IC.week; IC.more = IC.more;
 
 let tab = 'today';
@@ -695,7 +695,7 @@ function renderToday() {
     h += '<button class="day' + (x === ds ? ' on' : '') + (x === today ? ' today' : '') + '" data-act="day" data-v="' + x + '"><b>' + DOW[i] + '</b><span>' + Number(x.slice(8)) + '</span></button>';
   }
   h += '</div>';
-  if (ds === today) h += V4.hero(list, ds);
+  if (ds === today) h += V4.hero(list, ds) + V4.colorStrip(ds);
   h += '<div class="qa">' + [['calmGo', ANX_BEST, 'lotus', 'Тревожно'], ['napTool', '', 'sleepy', 'Тянет в сон'], ['svNow', '', 'bubble', 'Опрос'], ['addDo', '', 'pencil', 'Новое дело']].map(([a, v, i, t]) => '<button class="qb" data-act="' + a + '" data-v="' + v + '">' + ico(i, { size: 26 }) + '<span>' + t + '</span></button>').join('') + '</div>';
     h += '<div class="seg"><button data-act="mode" data-v="0" class="' + (!S.minMode[ds] ? 'on' : '') + '">Обычный день</button><button data-act="mode" data-v="1" class="' + (S.minMode[ds] ? 'on' : '') + '">День без сил</button></div>';
     h += '<div class="card row">' + ring(st.pct) + '<div class="grow"><h2 style="margin:0">Сделано ' + st.done + ' из ' + st.total + '</h2><div class="muted">Отбой сегодня в ' + fmt(B) + (S.minMode[ds] ? ' · показано только главное' : '') + '</div></div></div>';
@@ -951,23 +951,35 @@ const IDEAS = [
   ['Бутерброды и творожные перекусы', 'Хлеб, творожный сыр и второй компонент. Творог и йогурт для перекусов на работе.'],
   ['Выпечка в выходные', 'Для настроения, без обязательств.']
 ];
+let foodTab = 'menu', foodQ = '';
 function renderFood() {
   const mon = mondayOf(todayStr()), p = S.prep[mon] || {};
-  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Еда</h1><p class="sub">Простые заготовки на неделю по твоим вкусам.</p>';
-  h += '<div class="card"><h2>Люблю</h2><div class="chips">' + ['паста', 'пицца', 'суши и роллы', 'бургеры', 'салаты', 'сырники и блины', 'плов', 'пельмени', 'котлеты', 'хинкали', 'сэндвичи', 'выпечка', 'фрукты', 'сыр', 'шоколад', 'мороженое', 'овощи'].map((x) => '<span class="chip">' + x + '</span>').join('') +
-    '</div><h2 style="margin-top:14px">Не берём</h2><div class="chips">' + ['лук', 'чеснок', 'кинза', 'острое', 'рыба', 'супы', 'брокколи', 'нут', 'чечевица', 'перловка'].map((x) => '<span class="chip no">' + x + '</span>').join('') + '</div></div>';
-  { const wm = weekMenu(mon, cfg.lesson ? cfg.lesson.dow : 4), names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    h += '<div class="card"><h2>Меню ужинов на неделю</h2><div class="muted" style="margin-bottom:8px">Без лука, чеснока, острого, рыбы и супов. Если на ужин мясо, утром придёт напоминание достать его из морозилки. В четверг быстрый ужин перед занятием.</div>' +
-      wm.map((d, i) => '<details class="calm"><summary><b>' + names[i] + '</b> · ' + esc(d.t) + (d.meat ? ' · мясо' : '') + ' · ' + d.min + ' мин</summary><div class="note">' + esc(d.x) + '<br><small class="muted">Нужно: ' + esc(d.ing.join('; ')) + '</small></div></details>').join('') +
-      '<div class="addrow"><button class="btn s" data-act="menuShop">Добавить продукты в покупки</button></div></div>'; }
-  h += '<div class="card"><h2>Заготовки на неделю</h2><div class="muted" style="margin-bottom:6px">Воскресенье, 60–75 минут. Список сбрасывается каждую неделю.</div>';
-  PREP.forEach(([id, t]) => { h += '<div class="item' + (p[id] ? ' done' : '') + '"><button class="chk" data-act="prep" data-v="' + id + '">' + icon('check') + '</button><div class="grow t">' + t + '</div></div>'; });
-  h += '</div><div class="card"><h2>Идеи</h2>' + IDEAS.map(([a, b]) => '<div class="idea"><b>' + a + '</b><span class="muted">' + b + '</span></div>').join('') + '</div>';
-  h += '<div class="card"><h2>Покупки</h2>';
-  S.shop.forEach((s) => { h += '<div class="item' + (s.done ? ' done' : '') + '"><button class="chk" data-act="shop" data-v="' + s.id + '">' + icon('check') + '</button><div class="grow t">' + esc(s.t) + '</div><button class="x" data-act="shopdel" data-v="' + s.id + '" aria-label="Удалить">×</button></div>'; });
-  if (!S.shop.length) h += '<div class="muted">Список пуст. Закупки в субботу.</div>';
-  h += '<div class="addrow"><input type="text" id="shopIn" placeholder="Что купить"><button class="btn s" data-act="shopadd">Добавить</button></div>' +
-    (S.shop.some((s) => s.done) ? '<div style="margin-top:10px"><button class="btn g s" data-act="shopclear">Убрать купленное</button></div>' : '') + '</div>';
+  const TABSF = [['menu', 'Ужины'], ['wk', 'Выходные'], ['rec', 'Рецепты'], ['prep', 'Заготовки'], ['shop', 'Покупки'], ['like', 'Вкусы']];
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Еда</h1><div class="seg foodSeg">' + TABSF.map(([k, t]) => '<button class="' + (foodTab === k ? 'on' : '') + '" data-act="foodTab" data-v="' + k + '">' + t + '</button>').join('') + '</div>';
+  if (foodTab === 'like') {
+    h += '<div class="card"><h2>Люблю</h2><div class="chips">' + ['паста', 'пицца', 'суши и роллы', 'бургеры', 'салаты', 'сырники и блины', 'плов', 'пельмени', 'котлеты', 'курица', 'картофель'].map((x) => '<span class="chip">' + x + '</span>').join('') + '</div><h2 style="margin-top:14px">Не берём</h2><div class="chips">' + ['лук', 'чеснок', 'кинза', 'острое', 'рыба', 'супы', 'брокколи', 'нут', 'чечевица', 'перловка'].map((x) => '<span class="chip">' + x + '</span>').join('') + '</div></div>';
+  } else if (foodTab === 'menu') {
+    const wm = weekMenu(mon, cfg.lesson ? cfg.lesson.dow : 4), names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    h += '<div class="card"><h2>Ужины на неделю</h2><div class="muted" style="margin-bottom:8px">Мясо достань утром.</div>' + wm.map((d, i) => '<details class="calm"><summary><b>' + names[i] + '</b> · ' + esc(d.t) + ' · ' + d.min + ' мин</summary><div class="note">' + esc(d.x) + '<br><small class="muted">Нужно: ' + esc((d.ing || []).join(', ')) + '</small></div></details>').join('') + '<div class="addrow"><button class="btn s" data-act="menuShop">Продукты в покупки</button></div></div>';
+  } else if (foodTab === 'wk') {
+    const m = weekendMeals(mon);
+    h += '<div class="card"><h2>Завтраки и обеды на выходные</h2>' + [[6, 'Суббота'], [7, 'Воскресенье']].map(([d, n]) => '<div class="mh">' + n + '</div>' + [['Завтрак', m[d].b], ['Обед', m[d].l]].map(([k, x]) => '<details class="calm"><summary><b>' + k + '</b> · ' + esc(x.t) + ' · ' + x.min + ' мин</summary><div class="note">' + esc(x.x) + '<br><small class="muted">Нужно: ' + esc(x.ing.join(', ')) + '</small></div></details>').join('')).join('') + '<div class="addrow"><button class="btn s" data-act="wkShop">Продукты в покупки</button></div></div>';
+    h += '<div class="card"><h2>Ещё варианты</h2><div class="muted" style="margin-bottom:6px">Завтраки</div><div class="chips">' + BREAKFASTS.map((x) => '<span class="chip">' + esc(x.t) + '</span>').join('') + '</div><div class="muted" style="margin:10px 0 6px">Обеды</div><div class="chips">' + LUNCHES.map((x) => '<span class="chip">' + esc(x.t) + '</span>').join('') + '</div></div>';
+  } else if (foodTab === 'rec') {
+    const items = [...fridgeSorted(S.fridge, todayStr()), ...foodQ.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean).map((name) => ({ name }))];
+    h += '<div class="card"><h2>Рецепты из того, что есть</h2><div class="muted" style="margin-bottom:6px">Холодильник учитывается автоматически. Можно дописать продукты.</div><input type="text" id="foodQ" placeholder="например: яйца, сыр, помидоры" value="' + esc(foodQ) + '"><div class="addrow"><button class="btn s" data-act="foodFind">Подобрать</button><button class="btn g s" data-act="go" data-v="fridge">Холодильник</button></div></div>';
+    const rm = items.length ? recipeMatches(items, todayStr()) : [];
+    h += '<div class="card"><h2>' + (items.length ? 'Можно приготовить' : 'Все рецепты') + '</h2>' + (items.length ? (rm.length ? rm : []) .map((m) => '<details class="calm"><summary>' + esc(m.r.t) + ' · ' + esc(m.r.time) + '</summary><div class="note">' + esc(m.r.x) + '</div></details>').join('') || '<div class="muted">Пока ничего не подошло. Добавь ещё продукты.</div>' : RECIPES.map((r) => '<details class="calm"><summary>' + esc(r.t) + ' · ' + esc(r.time) + '</summary><div class="note">' + esc(r.x) + '</div></details>').join('')) + '</div>';
+  } else if (foodTab === 'prep') {
+    h += '<div class="card"><h2>Заготовки на неделю</h2><div class="muted" style="margin-bottom:6px">Воскресенье, 60–75 минут. Список сбрасывается каждую неделю.</div>';
+    PREP.forEach(([id, t]) => { h += '<div class="item' + (p[id] ? ' done' : '') + '"><button class="chk" data-act="prep" data-v="' + id + '">' + icon('check') + '</button><div class="grow t">' + t + '</div></div>'; });
+    h += '</div><div class="card"><h2>Идеи</h2>' + IDEAS.map(([a, b]) => '<div class="idea"><b>' + a + '</b><span class="muted">' + b + '</span></div>').join('') + '</div>';
+  } else {
+    h += '<div class="card"><h2>Покупки</h2>';
+    S.shop.forEach((s) => { h += '<div class="item' + (s.done ? ' done' : '') + '"><button class="chk" data-act="shop" data-v="' + s.id + '">' + icon('check') + '</button><div class="grow t">' + esc(s.t) + '</div><button class="x" data-act="shopdel" data-v="' + s.id + '" aria-label="Удалить">×</button></div>'; });
+    if (!S.shop.length) h += '<div class="muted">Список пуст. Закупки в субботу.</div>';
+    h += '<div class="addrow"><input type="text" id="shopIn" placeholder="Что купить"><button class="btn s" data-act="shopadd">Добавить</button></div>' + (S.shop.some((s) => s.done) ? '<div style="margin-top:10px"><button class="btn g s" data-act="shopclear">Убрать купленное</button></div>' : '') + '</div>';
+  }
   view.innerHTML = h;
 }
 
@@ -1163,10 +1175,10 @@ async function pushTest() {
 async function render() {
   checkBadges(); setBadge();
   if (MINI) { renderMini(); return; }
-  const cur = ['today', 'week', 'friend'].includes(tab) ? tab : 'menu';
+  const NAV = V4.navTabs(), cur = NAV.some(([k]) => k === tab) ? tab : 'menu';
   if (document.body && document.body.dataset) document.body.dataset.v = tab;
   applyMood();
-  tabsEl.innerHTML = TABS.map(([k, t]) => '<button class="tab' + (k === cur ? ' on' : '') + '" data-tab="' + k + '" aria-label="' + t + '" title="' + t + '">' + icon(k) + '<span>' + t + '</span></button>').join('');
+  tabsEl.innerHTML = [...NAV, ['menu', 'Меню', 'more']].map(([k, t, ic]) => '<button class="tab' + (k === cur ? ' on' : '') + '" data-tab="' + k + '" aria-label="' + t + '" title="' + t + '">' + (IC[k] ? icon(k) : ico(ic, { size: 23, sw: 1.6 })) + '<span>' + t + '</span></button>').join('');
   if (V4.isPage(tab)) { view.innerHTML = V4.pageOf(tab); } else if (tab === 'today') renderToday(); else if (tab === 'week') renderWeek(); else if (tab === 'proj') renderProj(); else if (tab === 'mentor') renderMentor(); else if (tab === 'smoke') renderSmoke(); else if (tab === 'fridge') renderFridge(); else if (tab === 'apts') renderApts(); else if (tab === 'taste') renderTaste(); else if (tab === 'plan') renderPlan(); else if (tab === 'food') renderFood(); else if (tab === 'money') renderMoney(); else if (tab === 'health') renderHealth(); else if (tab === 'cycle') renderCycle(); else if (tab === 'look') renderLook(); else await renderMore();
   V4.after(tab); V4.widgetSync();
 }
@@ -1180,6 +1192,7 @@ view.addEventListener('change', (e) => {
   if (e.target.dataset && e.target.dataset.in === 'lprice') { const it = S.look.items.find((y) => y.id === e.target.dataset.id); if (it) { it.price = e.target.value === '' ? '' : Math.max(0, Number(e.target.value) || 0); save(); render(); } } if (e.target.dataset && e.target.dataset.in === 'hdue') { const x = S.health.find((y) => y.id === e.target.dataset.id); if (x) { x.due = e.target.value; save(); } } });
 view.addEventListener('input', (e) => {
   const k = e.target.dataset.in;
+  if (e.target.id === 'thHue') { V4.act('thRange', e.target.value, e.target); return; }
   if (k === 'diary') { S.diary[sel] = e.target.value; save(); }
   if (k === 'review') { S.review[mondayOf(sel)] = e.target.value; save(); }
   if (k === 'hdue') { const x = S.health.find((y) => y.id === e.target.dataset.id); if (x) { x.due = e.target.value; save(); } }
@@ -1203,6 +1216,9 @@ async function onClick(e) {
     case 'task': { const t = S.tasks.find((x) => x.id === v); if (t) t.done = !t.done; save(); redraw(); } break;
     case 'taskdel': S.tasks = S.tasks.filter((x) => x.id !== v); save(); redraw(); break;
     case 'taskadd': { const i = document.getElementById('taskIn'); if (i.value.trim()) { S.tasks.push({ id: uid(), t: i.value.trim(), done: false }); save(); redraw(); } } break;
+    case 'foodTab': foodTab = v; redraw(); break;
+    case 'foodFind': { const i = document.getElementById('foodQ'); foodQ = i ? i.value : ''; redraw(); } break;
+    case 'wkShop': { const have = new Set(S.shop.map((x) => x.t.toLowerCase())); let n = 0; weekendShopping(mondayOf(todayStr())).forEach((x) => { if (!have.has(x.toLowerCase())) { S.shop.push({ id: uid(), t: x, done: false }); n++; } }); save(); toast(n ? 'Добавлено: ' + n : 'Всё уже в списке'); } break;
     case 'prep': { const mon = mondayOf(todayStr()); const p = (S.prep[mon] = S.prep[mon] || {}); p[v] = !p[v]; save(); redraw(); } break;
     case 'shop': { const t = S.shop.find((x) => x.id === v); if (t) t.done = !t.done; save(); redraw(); } break;
     case 'shopdel': S.shop = S.shop.filter((x) => x.id !== v); save(); redraw(); break;
@@ -1426,7 +1442,7 @@ V4.initV4({
   setTab: (t) => { tab = t; privOpen = false; window.scrollTo(0, 0); render(); }, version: VERSION, mini: MINI,
   calmMenu, calmStart: (k) => V4.calm(k, 0), exById, exercises: () => EXERCISES, stopTimer: () => { clearInterval(shTimer); shTimer = null; },
   togglePast: () => { showPast = !showPast; render(); }, gh: ghCfg, pushFile, ask: (q) => askLocal(q), report: (q) => claudeReport(q).slice(0, 1800),
-  emo: (id) => EMO[id] || '•', colors: (ds) => colorOfDay(ds),
+  emo: (id) => EMO[id] || '•', bookIdeas: () => BOOKS, colors: (ds) => colorOfDay(ds),
   outfitText: () => { const T = S.taste, o = outfitOf(todayStr(), T.ctx.where === 'выходной' ? 'выходной' : T.ctx.where, T.ctx.temp); return o.base + (o.outer ? ', сверху ' + o.outer : '') + '. Цвета дня: ' + o.colors + '.'; },
   songs: (ctxName) => { const no = (S.taste.no.music || []).map((x) => x.toLowerCase()), arr = (MUSIC[ctxName] || MUSIC.утро).filter((x) => !no.some((n) => x.toLowerCase().includes(n))), d = new Date(), k = (d.getDate() * 7 + d.getHours()) % arr.length; return [0, 1, 2].map((i) => arr[(k + i * 3) % arr.length]).map((t) => ({ t, href: tLinks.music(t) })); }
 });

@@ -33,7 +33,7 @@ export const FILMS = [
 /* ---------- Музыка по ситуации: только исполнители и саундтреки ---------- */
 export const MUSIC_CTX = [['утро', 'Утро'], ['бодрость', 'Взбодриться'], ['вечер', 'Вечер'], ['тренировка', 'Тренировка'], ['уборка', 'Уборка'], ['готовка', 'Готовка'], ['проекты', 'Проекты'], ['грусть', 'Когда грустно'], ['спокойствие', 'Спокойствие']];
 /* Конкретные песни: «Название — исполнитель». Без рэпа, инди, джаза, шансона и k-pop */
-export const MUSIC = {
+const MUSIC0 = {
   утро: ['Flowers — Miley Cyrus', 'Levitating — Dua Lipa', 'Dance the Night — Dua Lipa', 'Just Dance — Lady Gaga', 'Firework — Katy Perry', 'Espresso — Sabrina Carpenter', 'Party in the U.S.A. — Miley Cyrus', 'Roar — Katy Perry', 'Can\'t Stop the Feeling — Justin Timberlake'],
   бодрость: ['Blinding Lights — The Weeknd', 'Don\'t Start Now — Dua Lipa', 'Houdini — Dua Lipa', 'Poker Face — Lady Gaga', 'Starboy — The Weeknd', 'Can\'t Feel My Face — The Weeknd', 'Faint — Linkin Park', 'Good as Hell — Lizzo', 'Abracadabra — Lady Gaga'],
   вечер: ['Группа крови — Кино', 'Звезда по имени Солнце — Кино', 'Полковнику никто не пишет — Би-2', 'Серебро — Би-2', 'Save Your Tears — The Weeknd', 'Die For You — The Weeknd', 'Shallow — Lady Gaga и Bradley Cooper', 'Midnight Sky — Miley Cyrus', 'Skyfall — Adele'],
@@ -44,6 +44,19 @@ export const MUSIC = {
   грусть: ['Numb — Linkin Park', 'In the End — Linkin Park', 'Lost — Linkin Park', 'Wrecking Ball — Miley Cyrus', 'Someone Like You — Adele', 'Кукушка — Кино', 'Моя любовь — Би-2', 'The Scientist — Coldplay', 'Always Remember Us This Way — Lady Gaga'],
   спокойствие: ['Спокойная ночь — Кино', 'River Flows in You — Yiruma', 'Nuvole Bianche — Ludovico Einaudi', 'Comptine d\'un autre été — Yann Tiersen', 'Cornfield Chase — Hans Zimmer', 'Ocean Eyes — Billie Eilish', 'Photograph — Ed Sheeran', 'Experience — Ludovico Einaudi', 'Fix You — Coldplay']
 };
+const MORE = {
+  утро: ['Good 4 U — Olivia Rodrigo', 'Blank Space — Taylor Swift', 'Style — Taylor Swift', 'As It Was — Harry Styles', 'Watermelon Sugar — Harry Styles', 'Physical — Dua Lipa', 'Padam Padam — Kylie Minogue', 'Cool for the Summer — Demi Lovato', 'Sorry — Justin Bieber', 'Love Story — Taylor Swift', 'Adore You — Harry Styles', 'Нас не догонят — t.A.T.u.', 'Хочется — Земфира', 'Мама Америка — Мумий Тролль'],
+  бодрость: ['Stronger — Kelly Clarkson', 'Happy — Pharrell Williams', 'Uptown Funk — Mark Ronson и Bruno Mars', 'Shake It Off — Taylor Swift', 'Rain on Me — Lady Gaga и Ariana Grande', 'Stupid Love — Lady Gaga', 'Blow Your Mind — Dua Lipa', 'New Rules — Dua Lipa', 'Алые паруса — Алиса'],
+  вечер: ['Ghost — Justin Bieber', 'Earned It — The Weeknd', 'The Hills — The Weeknd', 'After Hours — The Weeknd', 'Million Reasons — Lady Gaga', 'Stay With Me — Sam Smith', 'Let Her Go — Passenger', 'Dancing On My Own — Calum Scott', 'Перемен — Кино', 'Мой рок-н-ролл — Би-2', 'Пора возвращаться домой — Би-2', 'Невидимка — Кино', 'Кончится лето — Кино', 'Summertime Sadness — Lana Del Rey', 'Young and Beautiful — Lana Del Rey'],
+  тренировка: ['Lose Yourself to Dance — Daft Punk', 'Don\'t Stop Me Now — Queen', 'Break Free — Ariana Grande', 'Titanium — David Guetta и Sia', 'One Step Closer — Linkin Park', 'Papercut — Linkin Park', 'Crawling — Linkin Park', 'Bad Guy — Billie Eilish', 'Girl on Fire — Alicia Keys', 'Eye of the Tiger — Survivor'],
+  уборка: ['Dancing Queen — ABBA', 'Mamma Mia — ABBA', 'Wannabe — Spice Girls', 'Girls Just Want to Have Fun — Cyndi Lauper', 'Funky Town — Lipps Inc.', 'I Wanna Dance with Somebody — Whitney Houston', 'Man! I Feel Like a Woman! — Shania Twain', 'Since U Been Gone — Kelly Clarkson', 'Livin\' La Vida Loca — Ricky Martin', 'Can\'t Get You Out of My Head — Kylie Minogue', 'Last Friday Night — Katy Perry'],
+  готовка: ['Rolling in the Deep — Adele', 'Hello — Adele', 'Easy On Me — Adele', 'Thinking Out Loud — Ed Sheeran', 'Shape of You — Ed Sheeran', 'Counting Stars — OneRepublic', 'Radioactive — Imagine Dragons', 'Demons — Imagine Dragons', 'Rude — Magic!', 'Лето — Земфира', 'Ромашки — Земфира'],
+  проекты: ['Interstellar Main Theme — Hans Zimmer', 'Dream is Collapsing — Hans Zimmer', 'Gladiator: Now We Are Free — Hans Zimmer', 'Pirates of the Caribbean — Klaus Badelt', 'Harry Potter: Obliviate — Nicholas Hooper', 'Bella\'s Lullaby — Carter Burwell', 'Moonlight Sonata — Ludwig van Beethoven', 'Clair de Lune — Claude Debussy', 'Gymnopédie No. 1 — Erik Satie', 'The Heart Asks Pleasure First — Michael Nyman', 'Una Mattina — Ludovico Einaudi', 'I Giorni — Ludovico Einaudi', 'Spiegel im Spiegel — Arvo Pärt'],
+  грусть: ['Hurt — Christina Aguilera', 'Tears in Heaven — Eric Clapton', 'Breakeven — The Script', 'Nothing Else Matters — Metallica', 'Iris — Goo Goo Dolls', 'Say Something — A Great Big World', 'Крылья — Нюша', 'Дожди-пистолеты — Би-2', 'Остаться в живых — Би-2', 'Песня без слов — Кино'],
+  спокойствие: ['Snow (Hey Oh) — Red Hot Chili Peppers', 'Banana Pancakes — Jack Johnson', 'Beautiful Day — U2', 'Fields of Gold — Sting', 'Lullaby — Nickelback', 'Over the Rainbow — Israel Kamakawiwoʻole', 'Chasing Cars — Snow Patrol', 'Time to Say Goodbye — Sarah Brightman', 'Hallelujah — Jeff Buckley', 'Gabriel\'s Oboe — Ennio Morricone']
+};
+export const MUSIC = Object.fromEntries(Object.keys(MUSIC0).map((k) => [k, [...MUSIC0[k], ...(MORE[k] || [])].filter((x, i, a) => a.indexOf(x) === i)]));
+
 /* ---------- Книги: без биографий, истории и манги ---------- */
 export const BOOKS = [
   'Гордость и предубеждение, Джейн Остин', 'Дневник Бриджит Джонс, Хелен Филдинг', 'До встречи с тобой, Джоджо Мойес', 'P.S. Я люблю тебя, Сесилия Ахерн', 'Один день, Дэвид Николс', 'Маленький принц, Антуан де Сент-Экзюпери',
@@ -70,6 +83,7 @@ export const colorOfDay = (ds) => COLORS[hash('c' + ds) % COLORS.length];
 export const WHERE = [['работа', 'Работа'], ['встреча', 'Встреча'], ['подруги', 'С подругами'], ['выходной', 'Выходной'], ['дом', 'Дома']];
 export const TEMP = [['тепло', 'Тепло'], ['прохладно', 'Прохладно'], ['холодно', 'Холодно'], ['дождь', 'Дождь']];
 const OUT = { тепло: [], прохладно: ['кожаная куртка', 'тренч', 'длинный кардиган'], холодно: ['пальто', 'тёплая куртка', 'пальто и шарф'], дождь: ['тренч и ботинки', 'куртка с капюшоном и ботинки'] };
+const LOOK_MORE = { работа: ['платье-футляр и ботильоны', 'джинсы прямого кроя, тонкий свитер и ботильоны', 'трикотажное платье и кардиган', 'юбка-карандаш, свитер и туфли', 'платье-свитер и ботинки'], встреча: ['чёрное платье и каблуки', 'юбка-миди, облегающий свитер и ботильоны', 'джинсы, бордовый свитер и каблуки', 'платье с запахом и сапоги'], подруги: ['джинсы, худи и кроссовки', 'мини-юбка, свитер и ботинки', 'платье и кроссовки', 'брюки-палаццо, свитер и каблуки'], выходной: ['спортивный костюм и кроссовки', 'леггинсы, свитшот и кроссовки', 'джинсы, худи и ботинки', 'платье-свитер и кроссовки'], дом: ['пижамный комплект и тёплые носки', 'широкие штаны и худи', 'мягкое платье для дома', 'леггинсы и длинный свитер'] };
 const LOOK = {
   работа: { тепло: ['платье до колена и балетки', 'юбка-миди, тонкий свитер и балетки', 'прямые брюки, тонкий свитер и балетки'], прохладно: ['платье и колготки, ботинки', 'брюки, свитер и туфли на невысоком каблуке', 'юбка, свитер и ботинки'], холодно: ['платье-свитер, колготки, сапоги', 'брюки, тёплый свитер и ботинки', 'юбка-миди, свитер и сапоги'], дождь: ['брюки, свитер и ботинки', 'платье-свитер, колготки, ботинки'] },
   встреча: { тепло: ['платье и туфли на каблуке', 'юбка, облегающий свитер и балетки'], прохладно: ['платье, ботинки или туфли', 'джинсы, свитер и каблуки'], холодно: ['платье-свитер, сапоги и платок', 'джинсы, тёплый свитер, ботинки'], дождь: ['джинсы, свитер, ботинки'] },
@@ -78,7 +92,8 @@ const LOOK = {
   дом: { тепло: ['футболка и мягкие шорты', 'лёгкое платье для дома'], прохладно: ['худи и леггинсы', 'мягкий свитер и штаны'], холодно: ['худи, тёплые носки, мягкие штаны', 'свитер и тёплые носки'], дождь: ['худи и леггинсы, носки'] }
 };
 export function outfitOf(ds, where = 'работа', temp = 'прохладно') {
-  const list = (LOOK[where] || LOOK.работа)[temp] || (LOOK[where] || LOOK.работа).прохладно, base = list[hash(ds + where + temp) % list.length];
+  const w0 = LOOK[where] || LOOK.работа, extra = (LOOK_MORE[where] || LOOK_MORE.работа).filter((x) => (temp === 'холодно' || temp === 'дождь') ? /свитер|худи|сапог|ботин|кардиган/.test(x) && !/мини|кроссов/.test(x) : true);
+  const list = [...(w0[temp] || w0.прохладно), ...extra], base = list[hash(ds + where + temp) % list.length];
   const o = where === 'дом' ? [] : OUT[temp] || [], outer = o.length ? o[hash(ds + 'o' + temp) % o.length] : '';
   const [c1, c2] = colorOfDay(ds), acc = temp === 'холодно' ? 'шарф или платок' : hash(ds + 'a') % 2 ? 'серебряные украшения' : 'серьги с цветными камнями';
   return { base, outer, colors: c1 + ' и ' + c2, acc: where === 'дом' ? '' : acc };

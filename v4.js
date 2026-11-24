@@ -1,8 +1,8 @@
 // Мой ритм ver. 4.0: меню, «Сейчас», подружка, мини-опросы, правка расписания, цель «без сна днём», звуки, ИИ, виджет.
 import { ico, patternUrl, SECTION_ART } from './icons.js';
-import { fimg, face, say, slotOf, persona } from './friend.js';
+import { fimg, face, say, slotOf, sayNow, persona } from './friend.js';
 import { PRESETS, EVENTS, SND0, play, fire } from './sounds.js';
-import { SLOTS, pickQs, QALL } from './survey.js';
+import { SLOTS, pickQs, QALL, WEEKLY } from './survey.js';
 import { gcCfg, gcSave, gcReady, gcAsk, gcTest } from './gigachat.js';
 
 let C = null; // контекст из app.js
@@ -14,10 +14,19 @@ const NO_SHIFT = new Set(['bed', 'screen', 'wake', 'wakeup']);
 
 /* ---------- Состояние ---------- */
 export function fixV4(S) {
-  const d = { name: '', fname: 'Подружка', goals: ['rhythm', 'projects', 'vape', 'nap'], sv: {}, svDone: {}, svSkip: {}, ed: {}, extra: {}, learn: {}, shift: {}, skips: {}, nap: {}, chat: [], fpose: 'wave', snd: SND0(), wAuto: false, wLast: '' };
+  const d = { name: '', fname: 'Подружка', goals: ['rhythm', 'projects', 'vape', 'nap'], sv: {}, svWeekly: {}, nav: ['today', 'week', 'friend'], theme: 'lav', books: [], svDone: {}, svSkip: {}, ed: {}, extra: {}, learn: {}, shift: {}, skips: {}, nap: {}, chat: [], fpose: 'wave', snd: SND0(), wAuto: false, wLast: '' };
   S.v4 = { ...d, ...(S.v4 || {}) }; S.v4.snd = { ...SND0(), ...(S.v4.snd || {}), ev: { ...SND0().ev, ...((S.v4.snd || {}).ev || {}) } };
-  ['sv', 'svDone', 'svSkip', 'ed', 'extra', 'learn', 'shift', 'skips', 'nap'].forEach((k) => { if (!S.v4[k] || typeof S.v4[k] !== 'object') S.v4[k] = {}; });
+  ['sv', 'svWeekly', 'svDone', 'svSkip', 'ed', 'extra', 'learn', 'shift', 'skips', 'nap'].forEach((k) => { if (!S.v4[k] || typeof S.v4[k] !== 'object') S.v4[k] = {}; });
   if (!Array.isArray(S.v4.chat)) S.v4.chat = [];
+  if (!Array.isArray(S.v4.books)) S.v4.books = [];
+  if (!S.v4.read || typeof S.v4.read !== 'object') S.v4.read = {};
+  // 4.1: проект «Фотосессия» добавляется один раз
+  try {
+    if (!S.v4.photoPj && Array.isArray(S.projects)) {
+      S.v4.photoPj = 1;
+      if (!S.projects.some((p) => /фотосесси/i.test(p.name))) S.projects.push({ id: 'pj' + Date.now().toString(36), name: 'Фотосессия', goal: 'Провести фотосессию и получить 20 хороших кадров', step: 'Выбрать стиль и 3 референса', note: 'Шаги: референсы, образ и одежда, место и фотограф, макияж и причёска, съёмка, отбор кадров.', arch: false, plan: 12, park: false });
+    }
+  } catch (e) { /* без проекта */ }
 }
 const V = () => C.S.v4;
 export const sound = (ev) => { try { fire(C.S.v4 && C.S.v4.snd ? C.S.v4 : { snd: null }, ev); } catch (e) { /* без звука */ } };
@@ -99,7 +108,8 @@ export function hero(list, ds) {
   const n = C.nowMin(); let i = nowIndex(list, ds); const slot = slotOf(n);
   const cur = i >= 0 ? list[i] : null; const nxt = list.slice(i + 1).find((b) => !b.skipped) || null;
   const st = C.dayStats(ds), allDone = st.total && st.done === st.total;
-  const f = say(allDone ? 'all' : slot, ds + slot), nm = V().name;
+  const bedB = list.find((b) => b.id === 'bed'), bedIn = bedB ? bedB.t - n : null;
+  const f = allDone ? say('all', ds + slot) : sayNow(cur ? cur.cat : '', cur ? cur.id : '', n, bedIn, ds + (cur ? cur.id : slot)), nm = V().name;
   const d = C.S.done[ds] || {};
   let h = '<div class="card hero"><div class="heroTop"><div class="heroF">' + fimg(f.pose) + '</div><div class="heroT"><div class="tagc">' + (cur ? 'Сейчас · ' + tm(cur.t) + (cur.dur ? '–' + tm(cur.t + cur.dur) : '') : nxt ? 'Дальше · ' + tm(nxt.t) : 'На сегодня всё') + '</div>';
   h += '<div class="heroName">' + esc(cur ? cur.title : nxt ? nxt.title : 'Свободный вечер') + '</div>';
@@ -113,6 +123,22 @@ export function hero(list, ds) {
 const SW = { 'лавандовый': '#c4b0ee', 'белый': '#fbf9ff', 'чёрный': '#2d2a33', 'бордовый': '#7d2c47', 'графитовый': '#4b4955', 'голубой': '#a9d3f2', 'коричневый': '#8b6b5b', 'пудровый': '#f2d0da' };
 export const swatches = (c1, c2, small) => '<div class="sw' + (small ? ' sm' : '') + '"><span class="dot" style="background:' + (SW[c1] || '#ccc') + '"></span><span class="dot" style="background:' + (SW[c2] || '#ccc') + '"></span><span class="swn">' + esc(c1) + ' + ' + esc(c2) + '</span></div>';
 
+export const colorStrip = (ds) => { const [a, b] = C.colors(ds); return '<div class="card colorStrip"><span class="muted">Цвет дня</span>' + swatches(a, b) + '<button class="btn g s" data-act="go" data-v="look">Образ</button></div>'; };
+
+/* ---------- Нижняя панель: настраиваемый набор ---------- */
+export const NAVOPTS = [['today', 'Сейчас', 'clock'], ['week', 'План', 'calendar'], ['friend', 'Подружка', 'heart'], ['food', 'Еда', 'apple'], ['proj', 'Проекты', 'rocket'], ['habits', 'Привычки', 'spark'], ['look', 'Образ', 'dress'], ['fridge', 'Холодильник', 'milk'], ['health', 'Здоровье', 'heartbeat'], ['taste', 'Подборки', 'clapper']];
+export function navTabs() { const sel = (V().nav && V().nav.length ? V().nav : ['today', 'week', 'friend']).slice(0, 4); return sel.map((k) => NAVOPTS.find((x) => x[0] === k)).filter(Boolean); }
+function navSheet() {
+  const sel = navTabs().map((x) => x[0]);
+  C.openSheet('<h2>Нижняя панель</h2><div class="muted">Выбери до четырёх разделов. Кнопка «Меню» останется всегда.</div><div class="chips">' + NAVOPTS.map(([k, t]) => '<button class="chip pick' + (sel.includes(k) ? ' on' : '') + '" data-act="navTog" data-v="' + k + '">' + esc(t) + '</button>').join('') + '</div><div class="addrow"><button class="btn" data-act="navDone">Готово</button><button class="btn g" data-act="navReset">Как было</button></div>', { t: 'nav' });
+}
+function navAct(a, v) {
+  if (a === 'navTog') { const sel = navTabs().map((x) => x[0]); const i = sel.indexOf(v); if (i >= 0) { if (sel.length > 1) sel.splice(i, 1); } else if (sel.length < 4) sel.push(v); else { C.toast('Максимум четыре'); return true; } V().nav = sel; C.save(); navSheet(); return true; }
+  if (a === 'navReset') { V().nav = ['today', 'week', 'friend']; C.save(); C.closeSheet(); C.redraw(); return true; }
+  if (a === 'navDone') { C.closeSheet(); C.redraw(); return true; }
+  return false;
+}
+
 /* ---------- Мини-опрос ---------- */
 let svState = null;
 export function maybeSurvey() {
@@ -123,7 +149,9 @@ export function maybeSurvey() {
   surveySheet(slot);
 }
 export function surveySheet(slot) {
-  const ds = C.todayStr(); slot = slot || slotOf(C.nowMin()); const qs = pickQs(slot, ds), a = (V().sv[ds] = V().sv[ds] || {}), cur = (a[slot] = a[slot] || {});
+  const ds = C.todayStr(); slot = slot || slotOf(C.nowMin()); const wd = new Date(ds + 'T12:00:00').getDay(), weekend = wd === 0 || wd === 6, wk = C.addDays ? ds.slice(0, 7) + Math.floor(Number(ds.slice(8)) / 7) : ds;
+  const weeklyDue = slot === 'evening' && wd === 0 && !V().svWeekly[wk];
+  const qs = pickQs(slot, ds, { weekly: weeklyDue }).filter((q) => weekend || q.k !== 'nap'), a = (V().sv[ds] = V().sv[ds] || {}), cur = (a[slot] = a[slot] || {});
   svState = { slot, ds }; const f = say(slot, ds + 'sv');
   let h = '<div class="svHead">' + face(f.pose) + '<div><div class="tagc">' + ico(SLOTS[slot][1], { size: 16 }) + ' ' + SLOTS[slot][0] + ' · быстро</div><h2 style="margin:2px 0 0">' + (V().name ? esc(V().name) + ', ' : '') + 'пара вопросов</h2></div></div>';
   qs.forEach((q) => { h += '<div class="q"><div class="qt">' + esc(q.q) + '</div><div class="chips">' + q.o.map((o) => '<button class="chip pick' + (cur[q.k] === o ? ' on' : '') + '" data-act="svA" data-v="' + q.k + '|' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div></div>'; });
@@ -134,7 +162,7 @@ export function surveySheet(slot) {
 export function svAct(act, v) {
   if (!svState) return false; const { slot, ds } = svState;
   if (act === 'svA') {
-    const [k, o] = v.split('|'); const cur = ((V().sv[ds] = V().sv[ds] || {})[slot] = V().sv[ds][slot] || {}); cur[k] = cur[k] === o ? '' : o;
+    const [k, o] = v.split('|'); if (k === 'int') V().svWeekly[ds.slice(0, 7) + Math.floor(Number(ds.slice(8)) / 7)] = 1; const cur = ((V().sv[ds] = V().sv[ds] || {})[slot] = V().sv[ds][slot] || {}); cur[k] = cur[k] === o ? '' : o;
     const q = QALL[slot].find((x) => x.k === k); if (q && q.ci && q.ci[o]) { const c = (C.S.ci[ds] = C.S.ci[ds] || {}); if (slot === 'morning') c.e = q.ci[o]; if (slot === 'evening') c.m = q.ci[o]; }
     if (k === 'nap') { const n = (V().nap[ds] = V().nap[ds] || {}); n.day = o !== 'не было' && cur[k] === o; n.src = 'sv'; }
     if (k === 'eve') { const n = (V().nap[ds] = V().nap[ds] || {}); n.eve = o === 'вздремнула' && cur[k] === o; }
@@ -154,25 +182,38 @@ export function renderNap() {
   const ds = C.todayStr(), r = V().nap[ds] || {}, st = napStreak();
   let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>Без дневного сна</h1><p class="sub">Бодрый день и крепкий ночной сон</p>';
   h += '<div class="card hero"><div class="heroTop"><div class="heroF">' + fimg(st >= 3 ? 'cheer' : 'thumbs') + '</div><div class="heroT"><div class="tagc">Серия</div><div class="bigNum">' + st + '</div><div class="muted">' + (st ? 'дн. без сна днём и вечером' : 'начнём с сегодняшнего дня') + '</div></div></div></div>';
-  h += '<div class="card"><h2>Сегодня</h2><div class="rowB"><button class="tileB' + (r.day === false ? ' on' : '') + '" data-act="napSet" data-v="day|0">' + ico('sun', { size: 30 }) + '<b>Днём не спала</b></button><button class="tileB bad' + (r.day ? ' on' : '') + '" data-act="napSet" data-v="day|1">' + ico('bed', { size: 30 }) + '<b>Днём спала</b></button></div><div class="rowB"><button class="tileB' + (r.eve === false ? ' on' : '') + '" data-act="napSet" data-v="eve|0">' + ico('moon', { size: 30 }) + '<b>Вечером не спала</b></button><button class="tileB bad' + (r.eve ? ' on' : '') + '" data-act="napSet" data-v="eve|1">' + ico('sleepy', { size: 30 }) + '<b>Вечером спала</b></button></div></div>';
+  const wd0 = new Date(ds + 'T12:00:00').getDay(), wend = wd0 === 0 || wd0 === 6;
+  h += '<div class="card"><h2>Сегодня</h2>' + (wend ? '' : '<div class="muted" style="margin-bottom:6px">В будни днём ты работаешь, считаем только вечер.</div>') + (wend ? '<div class="rowB"><button class="tileB' + (r.day === false ? ' on' : '') + '" data-act="napSet" data-v="day|0">' + ico('sun', { size: 30 }) + '<b>Днём не спала</b></button><button class="tileB bad' + (r.day ? ' on' : '') + '" data-act="napSet" data-v="day|1">' + ico('bed', { size: 30 }) + '<b>Днём спала</b></button></div>' : '') + '<div class="rowB"><button class="tileB' + (r.eve === false ? ' on' : '') + '" data-act="napSet" data-v="eve|0">' + ico('moon', { size: 30 }) + '<b>Вечером не спала</b></button><button class="tileB bad' + (r.eve ? ' on' : '') + '" data-act="napSet" data-v="eve|1">' + ico('sleepy', { size: 30 }) + '<b>Вечером спала</b></button></div></div>';
   h += '<div class="card"><h2>Тянет в сон?</h2><div class="muted">Короткий набор на ногах: умыться, подвигаться, свет, вода и таймер на 15 минут.</div><div class="addrow"><button class="btn" data-act="napTool">Попробовать сейчас</button></div></div>';
   h += '<div class="card"><h2>Эта неделя</h2><div class="weekDots">';
   for (let i = 6; i >= 0; i--) { const d = C.addDays(C.todayStr(), -i), x = V().nap[d]; h += '<div class="wd"><span class="dot ' + (!x ? 'n' : x.day || x.eve ? 'bad' : 'ok') + '"></span><small>' + C.shortDate(d) + '</small></div>'; }
   h += '</div><div class="muted">Зелёная точка: без сна. Розовая: сон был. Пустая: нет отметки.</div></div>';
   h += '<div class="card"><h2>Как это работает</h2><div class="steps4">' +
-    [['sun', 'В 13:40 напомню выйти на свет и размяться'], ['mug', 'После обеда стакан воды и 10 минут на ногах'], ['bell', 'В 20:45 напомню про вечерний «якорь»'], ['moon', 'Сон на ночь не сдвигаем: отбой по плану']].map(([i, t]) => '<div class="st4">' + ico(i, { size: 26 }) + '<span>' + esc(t) + '</span></div>').join('') + '</div></div>';
+    [['sun', 'В выходные в 13:20 напомню выйти на свет и размяться'], ['mug', 'В будни в 18:30 вечерний подъём: свет и движение'], ['bell', 'В 20:45 напомню про вечерний «якорь»'], ['moon', 'Сон на ночь не сдвигаем: отбой по плану']].map(([i, t]) => '<div class="st4">' + ico(i, { size: 26 }) + '<span>' + esc(t) + '</span></div>').join('') + '</div></div>';
   return h;
 }
 export function napSet(v) { const [k, x] = v.split('|'), ds = C.todayStr(), r = (V().nap[ds] = V().nap[ds] || {}); r[k] = x === '1'; C.save(); sfx('done'); C.redraw(); }
-const NAP_STEPS = [
-  ['Умойся холодной водой и протри шею', 'tap', 'Сделала'],
-  ['Встань и сделай 15 приседаний', 'count', 15],
-  ['Выйди к окну или на улицу: свет на лицо на 3 минуты', 'timer', 180],
-  ['Выпей стакан воды', 'tap', 'Выпила'],
-  ['Включи бодрую песню и пройдись', 'song', '']
-];
+const NAP_SETS = {
+  mix: ['Набор по порядку', [
+    ['Умойся холодной водой и протри шею', 'tap', 'Сделала'], ['Встань и сделай 15 приседаний', 'count', 15], ['Выйди к окну или на улицу: свет на лицо на 3 минуты', 'timer', 180], ['Выпей стакан воды', 'tap', 'Выпила'], ['Включи бодрую песню и пройдись', 'song', '']]],
+  move: ['Подвигаться', [
+    ['Встань и потянись вверх 10 раз', 'count', 10], ['Попрыгай на месте', 'count', 20], ['Пройдись по квартире быстрым шагом 3 минуты', 'timer', 180], ['Сделай 10 наклонов к носкам', 'count', 10], ['Выпей воды', 'tap', 'Выпила']]],
+  cold: ['Холод и вода', [
+    ['Умойся холодной водой', 'tap', 'Сделала'], ['Промой холодной водой запястья на 30 секунд', 'timer', 30], ['Открой окно на 2 минуты', 'timer', 120], ['Выпей холодной воды', 'tap', 'Выпила']]],
+  mind: ['Занять голову', [
+    ['Назови вслух 10 городов на одну букву', 'count', 10], ['Реши в уме 7 + 8, 14 + 9, 23 + 18 и скажи ответы вслух', 'tap', 'Решила'], ['Напиши список из пяти дел на завтра', 'tap', 'Записала'], ['Выпей чай или воду', 'tap', 'Выпила']]],
+  talk: ['Написать или позвонить', [
+    ['Напиши подруге или маме просто «как ты?»', 'tap', 'Отправила'], ['Позвони кому-то на 5 минут и пройдись по комнате', 'timer', 300], ['Выпей воды', 'tap', 'Выпила']]],
+  light: ['Свет и улица', [
+    ['Включи весь верхний свет', 'tap', 'Включила'], ['Выйди на улицу на 10 минут, телефон в кармане', 'timer', 600], ['Купи или возьми что-то вкусное по дороге', 'tap', 'Взяла']]],
+  home: ['Лёгкое дело', [
+    ['Выбери одно маленькое дело: посуда, стол, цветы', 'tap', 'Выбрала'], ['Делай его ровно 5 минут', 'timer', 300], ['Выпей воды', 'tap', 'Выпила']]]
+};
+let NAP_STEPS = NAP_SETS.mix[1];
 let nap = null, napIv = null;
-export function napTool(i) {
+export function napTool(i, set) {
+  if (i === undefined && !set) { C.openSheet('<h2>Тянет в сон</h2><div class="muted">Выбери способ. Сонливость волной приходит и уходит.</div><div class="chips">' + Object.entries(NAP_SETS).map(([k, x]) => '<button class="chip pick" data-act="napWay" data-v="' + k + '">' + esc(x[0]) + '</button>').join('') + '<button class="chip pick" data-act="napWay" data-v="rand">Случайный</button></div><div class="addrow"><button class="btn g s" data-act="calmStop">Закрыть</button></div>', { t: 'napPick' }); return; }
+  if (set) { const ks = Object.keys(NAP_SETS); NAP_STEPS = NAP_SETS[set === 'rand' ? ks[Date.now() % ks.length] : set][1]; }
   i = i || 0; clearInterval(napIv); nap = { i, n: 0 };
   if (i >= NAP_STEPS.length) { C.openSheet('<div class="center">' + fimg('cheer', 'big') + '<h2>Волна проходит</h2><div class="muted">Сонливость приходит волнами. Если через 15 минут всё равно тянет, поставь будильник на 20 минут, но лучше остаться на ногах и сделать лёгкое дело.</div></div><div class="addrow"><button class="btn" data-act="napEnd">Не сплю</button><button class="btn g" data-act="napWait">Таймер 15 минут</button></div>', { t: 'nap' }); sfx('cheer'); return; }
   const s = NAP_STEPS[i]; let w = '';
@@ -188,6 +229,7 @@ export function napAct(act, v) {
   if (act === 'napTap') { nap.n++; const el = document.getElementById('napN'); if (el) el.textContent = nap.n; C.haptic(); if (nap.n >= NAP_STEPS[nap.i][2]) { sfx('step'); napTool(nap.i + 1); } return true; }
   if (act === 'napEnd') { const ds = C.todayStr(), r = (V().nap[ds] = V().nap[ds] || {}); if (r.day === undefined && slotOf(C.nowMin()) !== 'night') r.day = false; C.save(); C.closeSheet(); C.redraw(); C.toast('Умница'); return true; }
   if (act === 'napWait') { C.closeSheet(); C.toast('Через 15 минут посмотрим, как ты'); setTimeout(() => { sfx('timer'); C.toast('15 минут прошло. Как ты?'); }, 15 * 60000); return true; }
+  if (act === 'napWay') { napTool(0, v); return true; }
   if (act === 'napSet') { napSet(v); return true; }
   return false;
 }
@@ -195,20 +237,60 @@ export function napAct(act, v) {
 /* ---------- Меню ---------- */
 const TILES = [
   ['Каждый день', [['proj', 'Проекты', 'rocket', 150], ['food', 'Еда', 'apple', 95], ['fridge', 'Холодильник', 'milk', 195], ['plan', 'План на 12 недель', 'target', 205], ['habits', 'Мои привычки', 'spark', 265]]],
-  ['Для меня', [['look', 'Образ', 'dress', 15], ['taste', 'Подборки', 'clapper', 300], ['cycle', 'Цикл', 'moon', 345], ['health', 'Здоровье', 'heartbeat', 175], ['mentor', 'Итоги и советы', 'bulb', 330]]],
+  ['Для меня', [['look', 'Образ', 'dress', 15], ['taste', 'Подборки', 'clapper', 300], ['cycle', 'Цикл', 'moon', 345], ['health', 'Здоровье', 'heartbeat', 175], ['mentor', 'Итоги и советы', 'bulb', 330], ['books', 'Книги', 'notebook', 25]]],
   ['Цели', [['smoke', 'Без вейпа', 'smoke', 275], ['nap', 'Без дневного сна', 'sleepy', 235], ['calm', 'Спокойствие', 'lotus', 160]]],
   ['Дом и деньги', [['money', 'Деньги', 'coin', 48], ['apts', 'Квартиры', 'house', 210]]],
-  ['Настройки', [['sounds', 'Звуки', 'bell', 320], ['ai', 'ИИ GigaChat', 'robot', 255], ['widget', 'Виджет', 'widget', 190], ['me', 'Обо мне', 'user', 340], ['set', 'Защита и копия', 'gear', 265]]]
+  ['Настройки', [['sounds', 'Звуки', 'bell', 320], ['ai', 'ИИ GigaChat', 'robot', 255], ['widget', 'Виджет', 'widget', 190], ['me', 'Обо мне', 'user', 340], ['navSet', 'Нижняя панель', 'grid', 220], ['theme', 'Оформление', 'palette', 300], ['set', 'Защита и копия', 'gear', 265]]]
 ];
 export function renderMenu() {
   const f = say('save', 'menu');
   let h = '<div class="menuHead">' + face('wave') + '<div><h1 style="margin:0">Меню</h1><p class="sub" style="margin:2px 0 0">Всё в одном месте</p></div></div>';
   TILES.forEach(([title, items]) => {
     h += '<div class="mh">' + esc(title) + '</div><div class="tiles">';
-    items.forEach(([k, t, i, hue]) => { h += '<button class="tile" style="--th:' + hue + '" data-act="go" data-v="' + k + '"><span class="ti">' + ico(i, { size: 34, sw: 1.5 }) + '</span><b>' + esc(t) + '</b></button>'; });
+    items.forEach(([k, t, i, hue]) => { h += '<button class="tile" style="--th:' + hue + '" data-act="' + (k === 'navSet' ? 'navSet' : 'go') + '" data-v="' + k + '"><span class="ti">' + ico(i, { size: 34, sw: 1.5 }) + '</span><b>' + esc(t) + '</b></button>'; });
     h += '</div>';
   });
   return h + '<p class="muted" style="text-align:center;margin-top:16px">' + esc(C.version) + '</p>';
+}
+
+/* ---------- Книги и чтение ---------- */
+const BSTAT = [['want', 'Хочу прочитать'], ['now', 'Читаю'], ['done', 'Прочитала']];
+export function renderBooks() {
+  const bk = V().books; let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>Книги и чтение</h1><p class="sub">Читай понемногу: 15 минут в день тоже считаются</p>';
+  const now = bk.filter((b) => b.s === 'now'), done = bk.filter((b) => b.s === 'done').length, today = C.todayStr();
+  const days = Object.keys(V().read || {}).filter((d) => V().read[d] > 0).length;
+  h += '<div class="card hero"><div class="heroTop"><div class="heroF">' + fimg(now.length ? 'thumbs' : 'wave') + '</div><div class="heroT"><div class="tagc">Статистика</div><div class="kv"><span>Прочитано книг</span><span class="r">' + done + '</span></div><div class="kv"><span>Дней с чтением</span><span class="r">' + days + '</span></div></div></div>';
+  h += '<div class="addrow"><button class="btn' + ((V().read || {})[today] ? ' g' : '') + '" data-act="bkRead">' + ((V().read || {})[today] ? 'Сегодня читала ✓' : 'Сегодня читала') + '</button></div></div>';
+  h += '<div class="card"><h2>Добавить книгу</h2><input type="text" id="bkIn" placeholder="Название и автор"><div class="addrow"><button class="btn s" data-act="bkAdd">Добавить</button></div></div>';
+  BSTAT.forEach(([k, t]) => { const l = bk.filter((b) => b.s === k); if (!l.length) return; h += '<div class="card"><h2>' + t + '</h2>' + l.map((b) => '<div class="kv" style="align-items:center;gap:8px"><span>' + esc(b.t) + '</span><span class="r" style="display:flex;gap:6px">' + (k !== 'now' ? '<button class="btn g s" data-act="bkSet" data-v="' + b.id + '|now">Читаю</button>' : '') + (k !== 'done' ? '<button class="btn g s" data-act="bkSet" data-v="' + b.id + '|done">Готово</button>' : '') + '<button class="btn g s" data-act="bkDel" data-v="' + b.id + '">×</button></span></div>').join('') + '</div>'; });
+  const mine = new Set(bk.map((b) => b.t));
+  h += '<div class="card"><h2>Идеи, что почитать</h2><div class="muted" style="margin-bottom:6px">Нажми, чтобы добавить в список. Без биографий, истории и манги.</div>' + (C.bookIdeas ? C.bookIdeas() : []).filter((x) => !mine.has(x)).slice(0, 8).map((x) => '<button class="chip pick" data-act="bkAdd" data-v="' + esc(x) + '">' + esc(x) + '</button>').join(' ') + '</div>';
+  return h;
+}
+function bookAct(a, v) {
+  const bk = V().books, id = () => 'b' + Date.now().toString(36) + Math.floor(Math.random() * 99);
+  if (a === 'bkAdd') { const i = document.getElementById('bkIn'), t = (v || (i ? i.value : '')).trim(); if (!t) return true; bk.push({ id: id(), t, s: 'want' }); if (i) i.value = ''; C.save(); C.redraw(); return true; }
+  if (a === 'bkSet') { const [i, st] = v.split('|'), b = bk.find((x) => x.id === i); if (b) b.s = st; C.save(); sfx('done'); C.redraw(); return true; }
+  if (a === 'bkDel') { V().books = bk.filter((x) => x.id !== v); C.save(); C.redraw(); return true; }
+  if (a === 'bkRead') { V().read = V().read || {}; const d = C.todayStr(); V().read[d] = V().read[d] ? 0 : 1; C.save(); sfx('done'); C.redraw(); return true; }
+  return false;
+}
+
+/* ---------- Оформление ---------- */
+const THEMES = [['auto', 'По разделам', ''], ['lav', 'Лаванда', 265], ['pink', 'Розовый', 335], ['mint', 'Мята', 150], ['butter', 'Масло', 48], ['sky', 'Небо', 205]];
+export function renderTheme() {
+  const cur = V().themeHue == null || V().themeHue === '' ? '' : Number(V().themeHue);
+  let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>Оформление</h1><p class="sub">Свои цвета приложения</p>';
+  h += '<div class="card"><h2>Тема</h2><div class="chips">' + THEMES.map(([k, t, hue]) => '<button class="chip pick' + (cur === hue ? ' on' : '') + '" data-act="thSet" data-v="' + hue + '"><span class="dot" style="display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;background:' + (hue === '' ? 'linear-gradient(90deg,#f6cddc,#e0d8f5)' : 'hsl(' + hue + ' 70% 80%)') + '"></span>' + t + '</button>').join('') + '</div>';
+  h += '<div class="muted" style="margin:14px 0 4px">Свой оттенок</div><input type="range" id="thHue" min="0" max="360" value="' + (cur === '' ? 265 : cur) + '" data-act="thRange" style="width:100%"></div>';
+  h += '<div class="card"><h2>Фоновый рисунок</h2><div class="kv"><span>Иконки на фоне</span><button class="btn g s" data-act="thPat">' + (V().noPat ? 'Выключены' : 'Включены') + '</button></div></div>';
+  return h;
+}
+function themeAct(a, v) {
+  if (a === 'thSet') { V().themeHue = v === '' ? '' : Number(v); C.save(); C.redraw(); return true; }
+  if (a === 'thRange') { const e = document.getElementById('thHue'); V().themeHue = e ? Number(e.value) : 265; C.save(); try { applyBg('theme'); } catch (x) { /* ок */ } return true; }
+  if (a === 'thPat') { V().noPat = !V().noPat; C.save(); C.redraw(); return true; }
+  return false;
 }
 
 /* ---------- Подружка: экран и чат ---------- */
@@ -216,7 +298,7 @@ const QUICK = [['Что у меня сейчас?', 'now'], ['Мне трево�
 export function renderFriend() {
   const fn = V().fname || 'Подружка', last = V().chat.filter((m) => m.r === 'f').slice(-1)[0];
   let h = '<div class="menuHead"><div><h1 style="margin:0">' + esc(fn) + '</h1><p class="sub" style="margin:2px 0 0">' + (gcReady() ? 'Болтаем с ИИ' : 'Подсказки по приложению') + '</p></div></div>';
-  h += '<div class="fstage">' + fimg(V().fpose || 'wave', 'huge') + '<div class="bubble">' + esc(last ? last.t : say(slotOf(C.nowMin()), C.todayStr()).text) + '</div></div>';
+  h += '<div class="fstage" data-act="fpose">' + fimg(V().fpose || 'wave', 'huge') + '<div class="bubble">' + esc(last ? last.t : say(slotOf(C.nowMin()), C.todayStr()).text) + '</div></div>';
   h += '<div class="chips quick">' + QUICK.map(([t, k]) => '<button class="chip pick" data-act="fq" data-v="' + k + '">' + esc(t) + '</button>').join('') + '</div>';
   const log = V().chat.slice(-10);
   if (log.length) h += '<div class="chat">' + log.map((m) => '<div class="msg ' + m.r + '">' + (m.r === 'f' ? face(m.p || 'wave') : '') + '<div class="mb">' + esc(m.t) + (m.a ? '<div class="addrow">' + m.a.map(([t, a, v]) => '<button class="btn g s" data-act="' + a + '" data-v="' + esc(v || '') + '">' + esc(t) + '</button>').join('') + '</div>' : '') + '</div></div>').join('') + '</div>';
@@ -228,6 +310,18 @@ const push = (m) => { V().chat.push(m); if (V().chat.length > 40) V().chat.splic
 function localReply(q) {
   const t = q.toLowerCase(), ds = C.todayStr();
   const R = (p, text, a) => ({ r: 'f', p, t: text, ...(a ? { a } : {}) });
+  const sayR = (k, p) => { const f = say(k, t + ds + (V().chat || []).length); return R(p || f.pose, f.text); };
+  if (/^\s*(привет|приветик|хай|хей|здравствуй|добрый (день|вечер|утро)|доброе утро|ку|здарова)[\s!.,)]*$/.test(t)) return sayR('hello', 'wave');
+  if (/^\s*(спасибо|благодарю|спс|мерси)[\s!.)]*$/.test(t)) return sayR('thanks', 'thumbs');
+  if (/^\s*(пока|до свидания|спокойной ночи|споки|до завтра)[\s!.)]*$/.test(t)) return sayR('bye', 'wave');
+  if (/^\s*(как дела|как ты|что нового|как жизнь)[\s?!.]*$/.test(t)) return R('wave', 'У меня всё хорошо, я же в телефоне. А как ты? Выбери: нормально, устала или тяжело.', [['Нормально', 'fsend', 'у меня всё нормально'], ['Устала', 'fsend', 'я устала'], ['Тяжело', 'fsend', 'мне тяжело']]);
+  if (/^\s*(норм|нормально|хорошо|отлично|супер|ок|окей|всё хорошо)[\s!.)]*$/.test(t) || /у меня всё нормально/.test(t)) return sayR('fine', 'cheer');
+  if (/устал|нет сил|выгор|тяжело|грустно|плохо|одинок|одиноко/.test(t)) { const f = say('sad', t + ds); return R('shy', f.text, [['Упражнение', 'calmMenu', ''], ['Песни', 'fsend', 'включи песню'], ['Только выслушать', 'fsend', 'просто хочу выговориться']]); }
+  if (/выговор|просто послуша/.test(t)) return R('shy', 'Я слушаю. Пиши как есть, без советов, если сама не попросишь.');
+  if (/итог.* дня|как прош[её]л день|разбор дня|подведи/.test(t)) { const st = C.dayStats(ds); return R('think', 'Сегодня сделано ' + st.done + ' из ' + st.total + '. ' + (st.total && st.done / st.total >= 0.7 ? 'Хороший день.' : 'Нормально, завтра новый.') + ' Одно хорошее за день назови себе вслух.', [['Опрос вечера', 'svNow', '']]); }
+  if (/мотивац|нет желания|лень|не могу начать|прокрастин/.test(t)) return R('cheer', 'Договоримся на пять минут. Включи таймер, сделай самый маленький шаг, остановиться можно будет после.', [['Таймер 5 минут', 'go', 'today']]);
+  if (/идеи? для проект|что делать в проект|проект/.test(t) && /идея|идеи|придума|что/.test(t)) return R('think', 'Идеи на проект: 1) 20 минут на черновик без правок; 2) собрать 5 референсов; 3) написать список из трёх шагов; 4) записать голосом мысли и разобрать позже.', [['Открыть проекты', 'go', 'projects']]);
+  if (/план.* недел|неделя|на неделю/.test(t)) return R('wave', 'Загляни во вкладку «План»: там неделя по дням. Могу напомнить про меню и список покупок.', [['План недели', 'go', 'week'], ['Меню', 'go', 'food']]);
   if (/тревож|страшно|паник|накрыва/.test(t)) return R('think', 'Давай вернёмся в «здесь и сейчас». Это займёт минуту-две.', [['Заземление', 'calmGo', 'ground'], ['Другие упражнения', 'calmMenu', '']]);
   if (/бесит|злю|злость|раздраж|ярост/.test(t)) return R('angry', 'Злость имеет право на выход. Выпустим пар безопасно: движение, смятая бумага, злое письмо.', [['Выплеснуть', 'calmGo', 'anger']]);
   if (/сон|спать|засып|клонит|тянет лечь|вздремн/.test(t)) return R('think', 'Сонливость волной приходит и уходит. Попробуем взбодриться на ногах.', [['Набор «не уснуть»', 'napTool', '']]);
@@ -236,7 +330,7 @@ function localReply(q) {
   if (/надеть|образ|одежд|вещ/.test(t)) return R('wave', C.outfitText(), [['Образ и цвета', 'go', 'look']]);
   if (/песн|музык|включ|послуш/.test(t)) { const m = C.songs(/спокой|тих/.test(t) ? 'спокойствие' : /груст|плох/.test(t) ? 'грусть' : /трен|спорт/.test(t) ? 'тренировка' : 'утро'); return R('cheer', 'Вот три песни под настроение: ' + m.map((x) => x.t).join('; ') + '.', m.slice(0, 2).map((x) => ['▶ ' + x.t.split(' — ')[0], 'open_url', x.href])); }
   if (/сейчас|план|расписан|дальше/.test(t)) { const l = C.dayList(ds), i = nowIndex(l, ds), b = l[i >= 0 ? i : 0], n = l.slice((i >= 0 ? i : 0) + 1).find((x) => !x.skipped); return R('wave', b ? 'Сейчас в плане: ' + b.title + ' (' + tm(b.t) + ').' + (n ? ' Дальше в ' + tm(n.t) + ': ' + n.title + '.' : '') : 'На сегодня пусто.', [['Открыть «Сегодня»', 'go', 'today']]); }
-  const hit = C.ask(q)[0];
+  const hit = C.ask(q).find((x) => x.s >= 3);
   if (hit) return R('think', hit.t + (hit.x ? '. ' + hit.x : ''), hit.kind === 'ex' ? [['Начать', 'calmGo', hit.k]] : null);
   return R('shrug', 'Тут я без подсказки, но могу помочь с планом, едой, образом, музыкой и упражнениями. Хочешь болтать свободно? Подключи ИИ в меню «ИИ GigaChat».', [['Подключить ИИ', 'go', 'ai']]);
 }
@@ -344,6 +438,26 @@ export function meAct(act, v) {
 }
 
 /* ---------- Мои привычки ---------- */
+function bars(vals, max, cls) { return '<div class="bars">' + vals.map(([l, v]) => '<div class="bar"><i class="' + (cls || '') + '" style="height:' + Math.round(Math.min(1, (v || 0) / max) * 100) + '%"></i><small>' + l + '</small></div>').join('') + '</div>'; }
+function analytics() {
+  const today = C.todayStr(), days = []; for (let i = 13; i >= 0; i--) days.push(C.addDays(today, -i));
+  const lab = (d) => d.slice(8);
+  const pct = days.map((d) => { let st; try { st = C.dayStats(d); } catch (e) { st = null; } return [lab(d), st && st.total ? Math.round(st.done / st.total * 100) : 0]; });
+  const water = days.map((d) => [lab(d), Number((C.S.water || {})[d]) || 0]);
+  const en = days.map((d) => [lab(d), ((C.S.ci || {})[d] || {}).e || 0]), mo = days.map((d) => [lab(d), ((C.S.ci || {})[d] || {}).m || 0]);
+  const filled = pct.filter((x) => x[1] > 0), avg = filled.length ? Math.round(filled.reduce((a, x) => a + x[1], 0) / filled.length) : 0;
+  const best = [...pct].sort((a, b) => b[1] - a[1])[0];
+  const slp = days.filter((d) => V().nap[d] && (V().nap[d].day || V().nap[d].eve)).length, free = days.filter((d) => V().nap[d] && !V().nap[d].day && !V().nap[d].eve).length;
+  const dowN = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'], byDow = [0, 1, 2, 3, 4, 5, 6].map((w) => { const x = days.filter((d) => new Date(d + 'T12:00:00').getDay() === w).map((d) => pct.find((p) => p[0] === lab(d))[1]); return [dowN[w], x.length ? Math.round(x.reduce((a, b) => a + b, 0) / x.length) : 0]; });
+  const bd = [...byDow].sort((a, b) => b[1] - a[1])[0], wd = [...byDow].filter((x) => x[1] > 0).sort((a, b) => a[1] - b[1])[0];
+  if (!filled.length) return '<div class="card"><h2>Графики</h2><div class="muted">Появятся после первых отмеченных дел.</div></div>';
+  let h = '<div class="card"><h2>Выполнение дел за 14 дней</h2>' + bars(pct, 100) + '<div class="muted">В среднем ' + avg + '%. Лучший день: ' + (best ? best[0] + ' число, ' + best[1] + '%' : 'пока нет') + '.</div></div>';
+  h += '<div class="card"><h2>По дням недели</h2>' + bars(byDow, 100, 'lv') + '<div class="muted">' + (bd && bd[1] ? 'Легче всего идёт ' + bd[0] + '. ' : '') + (wd && wd[1] < (bd ? bd[1] : 0) ? 'Сложнее ' + wd[0] + ': можно запланировать меньше.' : '') + '</div></div>';
+  h += '<div class="card"><h2>Вода, стаканы</h2>' + bars(water, 8, 'bl') + '</div>';
+  if (en.some((x) => x[1]) || mo.some((x) => x[1])) h += '<div class="card"><h2>Силы утром</h2>' + bars(en, 4) + '<h2 style="margin-top:12px">Настроение вечером</h2>' + bars(mo, 4, 'lv') + '</div>';
+  h += '<div class="card"><h2>Сон днём и вечером</h2><div class="kv"><span>Дней без сна</span><span class="r">' + free + '</span></div><div class="kv"><span>Дней со сном</span><span class="r">' + slp + '</span></div></div>';
+  return h;
+}
 export function renderHabits() {
   const sg = suggestions(); let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>Мои привычки</h1><p class="sub">Что приложение заметило по твоим правкам и опросам</p>';
   if (sg.length) h += '<div class="card"><h2>Подстроить расписание</h2>' + sg.map((x) => '<div class="kv" style="align-items:center;gap:8px"><span>«' + esc(blockName(x.id)) + '» чаще идёт ' + shiftTxt(x.d) + ' (' + x.n + ' раз)</span><button class="btn s" data-act="shiftYes" data-v="' + x.id + '|' + x.d + '">Сдвинуть</button></div>').join('') + '</div>';
@@ -354,6 +468,7 @@ export function renderHabits() {
   const sv = Object.entries(V().sv); const cnt = {}; sv.forEach(([ds, o]) => Object.values(o).forEach((q) => { if (q.sleepy && q.sleepy !== 'нет') cnt.sl = (cnt.sl || 0) + 1; if (q.vape && q.vape !== 'нет') cnt.vp = (cnt.vp || 0) + 1; if (q.day === 'тяжело') cnt.hd = (cnt.hd || 0) + 1; }));
   h += '<div class="card"><h2>По опросам</h2><div class="kv"><span>Дней, когда тянуло в сон</span><span class="r">' + (cnt.sl || 0) + '</span></div><div class="kv"><span>Дней, когда тянуло к вейпу</span><span class="r">' + (cnt.vp || 0) + '</span></div><div class="kv"><span>Тяжёлых дней</span><span class="r">' + (cnt.hd || 0) + '</span></div><div class="muted" style="margin-top:8px">Опросы идут утром, днём, вечером и перед сном. Чем больше отметок, тем точнее подсказки.</div></div>';
   if (!sg.length && !sh.length && !sk.length) h += '<div class="card"><div class="muted">Пока мало данных. Когда будешь править время дел или пропускать их, здесь появятся наблюдения и предложения.</div></div>';
+  h += analytics();
   return h;
 }
 export function habitAct(act, v) {
@@ -368,6 +483,9 @@ const PARTS = ['грудь', 'горло', 'живот', 'плечи', 'голо
 const NEEDS = ['отдых', 'тишина', 'объятия', 'движение', 'еда', 'поговорить', 'сделать дело', 'побыть одной'];
 const SMALL = ['стакан воды', 'тёплый чай', 'прогулка 10 минут', 'написать подруге', 'душ', 'музыка', 'плед и фильм', 'проветрить'];
 const IX = {
+  focus: [['list', 'Что крутится в голове'], ['choose', ['работа', 'проект', 'дом', 'отношения', 'тело', 'деньги']], ['write', 'Мой первый шаг на 10 минут'], ['count', 8, 'Убрала предмет'], ['hold', 6], ['tap', 'Начинаю']],
+  reset: [['count', 20, 'Встряхни'], ['count', 15, 'Поворот'], ['choose', SMALL], ['tap', 'Сделала'], ['write', 'Сейчас я чувствую…']],
+  joy: [['list', 'Приятная мелочь'], ['choose', ['тёплый чай', 'сообщение от близкого', 'красивое небо', 'вкусная еда', 'удачное дело', 'музыка']], ['write', 'Когда повторю'], ['write', 'Что получилось у меня сегодня']],
   ground: [['count', 5, 'Назвала'], ['count', 4, 'Коснулась'], ['count', 3, 'Услышала'], ['count', 2, 'Нашла'], ['tap', 'Сделала глоток'], ['tap', 'Я здесь']],
   thought: [['write', 'Моя тревожная мысль'], ['write', 'Знаю точно / только думаю'], ['write', 'Самый вероятный исход'], ['write', 'Маленький шаг на сегодня'], ['write', 'Что бы сказала подруге']],
   defuse: [['write', 'Я замечаю мысль, что…'], ['cloud'], ['tap', 'Сделала'], ['tap', 'Вернулась к делу']],
@@ -422,18 +540,25 @@ const HUE = { today: 265, week: 205, plan: 205, proj: 150, mentor: 330, friend: 
 const ART = { plan: 'week', friend: 'mentor', nap: 'sleep', habits: 'menu', ai: 'more', widget: 'more', me: 'mentor', set: 'more' };
 export function applyBg(tab) {
   try {
-    const h = HUE[tab] == null ? 265 : HUE[tab], dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches, st = document.body.style;
+    const th = V() && V().themeHue, h = th != null && th !== '' ? Number(th) : HUE[tab] == null ? 265 : HUE[tab], dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches, st = document.body.style;
     const stroke = dark ? 'hsl(' + h + ' 55% 75% / .26)' : 'hsl(' + h + ' 42% 55% / .30)', fill = dark ? 'hsl(' + h + ' 55% 75% / .06)' : 'hsl(' + h + ' 60% 70% / .14)';
     st.setProperty('--h', h); st.setProperty('--pink', dark ? 'hsl(' + h + ' 25% 25%)' : 'hsl(' + h + ' 75% 91%)'); st.setProperty('--lav', dark ? 'hsl(' + (h + 25) + ' 22% 28%)' : 'hsl(' + (h + 25) + ' 60% 92%)'); st.setProperty('--lav-d', dark ? 'hsl(' + h + ' 60% 78%)' : 'hsl(' + h + ' 38% 48%)'); st.setProperty('--af', dark ? 'hsl(' + h + ' 40% 45% / .35)' : 'hsl(' + h + ' 70% 82% / .55)');
-    st.setProperty('--pat', patternUrl(SECTION_ART[ART[tab] || tab] || SECTION_ART.menu, stroke, fill));
+    st.setProperty('--pat', V().noPat ? 'none' : patternUrl(SECTION_ART[ART[tab] || tab] || SECTION_ART.menu, stroke, fill));
+    if (th != null && th !== '') st.setProperty('--bg', dark ? 'hsl(' + h + ' 14% 12%)' : 'hsl(' + h + ' 55% 97%)'); else st.removeProperty('--bg');
   } catch (e) { /* без фона */ }
 }
-const PAGES = { menu: renderMenu, friend: renderFriend, nap: renderNap, sounds: renderSounds, ai: renderAI, widget: renderWidget, me: renderMe, habits: renderHabits };
+const PAGES = { books: renderBooks, theme: renderTheme, menu: renderMenu, friend: renderFriend, nap: renderNap, sounds: renderSounds, ai: renderAI, widget: renderWidget, me: renderMe, habits: renderHabits };
 export const pageOf = (tab) => (PAGES[tab] ? PAGES[tab]() : null);
 export const isPage = (tab) => !!PAGES[tab];
 export async function act(a, v, el) {
-  if (a === 'go') { C.closeSheet(); if (v === 'calm') { C.calmMenu(); return true; } C.setTab(v); return true; }
+  if (a === 'go') { C.closeSheet(); if (v === 'calm') { C.calmMenu(); return true; } C.setTab(v === 'projects' ? 'proj' : v); return true; }
   if (a === 'edit') { editSheet(v); return true; }
+  if (/^bk[A-Z]/.test(a)) return bookAct(a, v);
+  if (/^th[A-Z]/.test(a)) return themeAct(a, v);
+  if (a === 'navSet') { navSheet(); return true; }
+  if (/^nav[A-Z]/.test(a)) return navAct(a, v);
+  if (a === 'calmMenu') { C.calmMenu(); return true; }
+  if (a === 'fpose') { const ks = ['wave', 'think', 'cheer', 'wow', 'angry', 'shrug', 'shy', 'thumbs']; V().fpose = ks[(ks.indexOf(V().fpose || 'wave') + 1) % ks.length]; C.redraw(); return true; }
   if (a === 'addDo') { addSheet(); return true; }
   if (a === 'adSave') { addSave(); return true; }
   if (/^ed[A-Z]/.test(a)) return editAct(a, v);
@@ -446,7 +571,7 @@ export async function act(a, v, el) {
   if (a === 'meSave' || a === 'goal') return meAct(a, v);
   if (a === 'shiftYes' || a === 'shiftNo') return habitAct(a, v);
   if (a === 'fq') { friendQuick(v); return true; }
-  if (a === 'fsend') { const i = document.getElementById('chatIn'); if (i) { const t = i.value; i.value = ''; friendSend(t); } return true; }
+  if (a === 'fsend') { if (v) { friendSend(v); return true; } const i = document.getElementById('chatIn'); if (i) { const t = i.value; i.value = ''; friendSend(t); } return true; }
   if (a === 'fclear') { V().chat = []; C.save(); C.redraw(); return true; }
   if (a === 'open_url') { window.open(v, '_blank', 'noopener'); return true; }
   if (a === 'calmGo') { calm(v, 0); return true; }
