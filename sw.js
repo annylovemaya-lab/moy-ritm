@@ -1,4 +1,4 @@
-const V = 'moy-ritm-v4-1';
+const V = 'moy-ritm-v4-2';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'core.js', 'tips.js', 'mentor2.js', 'extras.js', 'tastes.js', 'menu.js', 'icons.js', 'friend.js', 'sounds.js', 'survey.js', 'gigachat.js', 'v4.js', 'widget/Moy_ritm_widget.js', 'friend/wave.webp', 'friend/face-wave.webp', 'friend/think.webp', 'friend/face-think.webp', 'friend/cheer.webp', 'friend/face-cheer.webp', 'friend/wow.webp', 'friend/face-wow.webp', 'friend/angry.webp', 'friend/face-angry.webp', 'friend/shrug.webp', 'friend/face-shrug.webp', 'friend/shy.webp', 'friend/face-shy.webp', 'friend/thumbs.webp', 'friend/face-thumbs.webp', 'config.json', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
