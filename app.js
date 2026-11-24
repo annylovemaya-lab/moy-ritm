@@ -402,8 +402,6 @@ function renderTaste() {
   const chips = (arr, key, cur) => '<div class="chips">' + arr.map(([k, t]) => '<button class="chip pick' + (k === cur ? ' on' : '') + '" data-act="tctx" data-v="' + key + '|' + k + '">' + t + '</button>').join('') + '</div>';
   const o = outfitOf(ds, c.where, c.temp), [c1, c2] = colorOfDay(ds);
   h += wxCard();
-  h += '<div class="card"><h2>Образ дня</h2><div class="muted" style="margin:6px 0 4px">Куда</div>' + chips(WHERE, 'where', c.where) + '<div class="muted" style="margin:10px 0 4px">Какая погода</div>' + chips(TEMP, 'temp', c.temp) +
-    '<div class="note" style="margin-top:10px"><b>' + esc(o.base) + '</b>' + (o.outer ? '<br>Сверху: ' + esc(o.outer) : '') + '<br>Цвета дня' + V4.swatches(c1, c2) + (o.acc ? '<br>Акцент: ' + esc(o.acc) : '') + '</div></div>';
   h += pickRow('series', 'Сериал на вечер', tPicks('series'), [['seen', 'Смотрела'], ['no', 'Не моё'], ['want', 'Хочу']]);
   h += pickRow('films', 'Фильм на выходные', tPicks('films'), [['seen', 'Смотрела'], ['no', 'Не моё'], ['want', 'Хочу']]);
   h += '<div class="card"><h2>Музыка</h2>' + chips(MUSIC_CTX, 'music', c.music) + '</div>' + pickRow('music', 'Включи: ' + (MUSIC_CTX.find((x) => x[0] === c.music) || [0, ''])[1].toLowerCase(), tPicks('music'), [['no', 'Не моё']]);
@@ -696,50 +694,47 @@ function renderToday() {
   }
   h += '</div>';
   if (ds === today) h += V4.hero(list, ds) + V4.colorStrip(ds);
-  h += '<div class="qa">' + [['calmGo', ANX_BEST, 'lotus', 'Тревожно'], ['napTool', '', 'sleepy', 'Тянет в сон'], ['svNow', '', 'bubble', 'Опрос'], ['addDo', '', 'pencil', 'Новое дело']].map(([a, v, i, t]) => '<button class="qb" data-act="' + a + '" data-v="' + v + '">' + ico(i, { size: 26 }) + '<span>' + t + '</span></button>').join('') + '</div>';
-    h += '<div class="seg"><button data-act="mode" data-v="0" class="' + (!S.minMode[ds] ? 'on' : '') + '">Обычный день</button><button data-act="mode" data-v="1" class="' + (S.minMode[ds] ? 'on' : '') + '">День без сил</button></div>';
-    h += '<div class="card row">' + ring(st.pct) + '<div class="grow"><h2 style="margin:0">Сделано ' + st.done + ' из ' + st.total + '</h2><div class="muted">Отбой сегодня в ' + fmt(B) + (S.minMode[ds] ? ' · показано только главное' : '') + '</div></div></div>';
-  const past = ds === today && nowIdx > 0 ? list.slice(0, nowIdx) : [];
-  const pastDone = past.filter((b) => !b.optional && !b.skipped && d[b.id]).length, pastTot = past.filter((b) => !b.optional && !b.skipped).length;
-  h += '<div class="sect">' + ico('clock', { size: 22 }) + '<h2>Расписание</h2></div>';
-  if (past.length) h += '<button class="pastBar" data-act="showPast">' + (showPast ? 'Скрыть прошедшее' : 'Утро позади: ' + pastDone + ' из ' + pastTot + ' · показать') + '</button>';
+  h += '<div class="qa">' + [['calmGo', ANX_BEST, 'lotus', 'Тревожно'], ['napTool', '', 'sleepy', 'Сон'], ['svNow', '', 'bubble', 'Опрос'], ['addDo', '', 'pencil', 'Дело']].map(([a, v, i, t]) => '<button class="qb" data-act="' + a + '" data-v="' + v + '">' + ico(i, { size: 28 }) + '<span>' + t + '</span></button>').join('') + '</div>';
+  h += '<div class="card row prog">' + ring(st.pct) + '<div class="grow"><h2 style="margin:0">' + st.done + ' из ' + st.total + '</h2><div class="muted">отбой ' + fmt(B) + '</div></div><button class="chip pick' + (S.minMode[ds] ? ' on' : '') + '" data-act="mode" data-v="' + (S.minMode[ds] ? 0 : 1) + '">' + ico('feather', { size: 16 }) + ' День без сил</button></div>';
+  const d0 = Math.max(0, nowIdx), vis = (ds === today && !showPast) ? list.slice(d0, d0 + 5) : list;
+  const hidden = ds === today ? list.length - vis.length : 0;
+  h += '<div class="sect">' + ico('clock', { size: 22 }) + '<h2>Дальше</h2></div>';
   list.forEach((b, i) => {
-    if (i < nowIdx && !showPast && ds === today) return;
+    if (!vis.includes(b)) return;
     const isDone = !!d[b.id];
     const pst = ds < today || (ds === today && nowMin() > b.t + Math.max(b.dur, 15) && i !== nowIdx);
     const sess = isSess(b), asg = sess ? (S.pa[ds] || {})[b.id] : null, pr = asg && projById(asg.pid);
-    const title = pr ? pr.name + ' · ' + b.title.replace('Проект: ', '') : b.title;
+    const title = pr ? pr.name : b.title.replace(/^Проект: /, 'Проект · ');
     const act = sess ? 'sess' : b.id === 'save' ? 'saveSheet' : 'open';
-    const extra = sess ? (pr ? (asg.task ? '<div class="task">' + esc(asg.task) + '</div>' : '') : '<div class="task pick">Выбрать проект и задачу</div>') : '';
     h += '<div class="blk c-' + b.cat + (isDone ? ' done' : '') + (i === nowIdx ? ' now' : '') + (pst ? ' past' : '') + (b.skipped ? ' skip' : '') + '" data-act="' + act + '" data-v="' + b.id + '">' +
-      '<div class="tm">' + fmt(b.t) + (b.dur ? '<small>' + fmt(b.t + b.dur) + '</small>' : '') + '</div>' +
-      '<div class="grow">' + (i === nowIdx ? '<div class="nowtag">сейчас</div>' : '') +
-      '<div class="ttl">' + esc(title) + (b.optional ? '<span class="tag">по желанию</span>' : '') + (b.skipped ? '<span class="tag">пропущено</span>' : '') + (b.edited && !b.skipped ? '<span class="tag">изменено</span>' : '') + '</div>' + extra +
-      (b.hint && !sess ? '<div class="hint">' + esc(b.hint) + '</div>' : '') + '</div>' +
-      '<button class="pen" data-act="edit" data-v="' + b.id + '" aria-label="Править">' + ico('pencil', { size: 18 }) + '</button>' +
+      '<div class="tm">' + fmt(b.t) + '</div><div class="emo">' + (EMO[b.id] || '•') + '</div>' +
+      '<div class="grow"><div class="ttl">' + esc(title) + (b.optional ? '<span class="tag">по желанию</span>' : '') + '</div></div>' +
+      '<button class="pen" data-act="edit" data-v="' + b.id + '" aria-label="Править">' + ico('pencil', { size: 16 }) + '</button>' +
       '<button class="chk" data-act="done" data-v="' + b.id + '" aria-label="Отметить">' + icon('check') + '</button></div>';
   });
-  h += '<div class="addrow"><button class="btn g s" data-act="addDo">+ Добавить дело</button></div>';
-  if (ds === today) { h += '<div class="sect">' + ico('heart', { size: 22 }) + '<h2>Для тебя</h2></div>' + bannersCard() + mentorMini(ds) + kitCard(ds) + dayPicks(ds) + fridgeNote(); }
-  h += '<div class="sect">' + ico('drop', { size: 22 }) + '<h2>Тело</h2></div>';
+  if (ds === today && (hidden > 0 || showPast)) h += '<button class="pastBar" data-act="showPast">' + (showPast ? 'Свернуть' : 'Весь день · ещё ' + hidden) + '</button>';
+  const wc = S.water[ds] || 0;
+  h += '<div class="card waterC"><div class="row" style="margin-bottom:8px"><span class="wi">' + icon('drop') + '</span><b class="grow">Вода</b><span class="muted">' + wc + '/8</span></div><div class="water">';
+  for (let i = 1; i <= 8; i++) h += '<button class="drop' + (i <= wc ? ' on' : '') + '" data-act="water" data-v="' + i + '" aria-label="Стакан ' + i + '">' + icon('drop') + '</button>';
+  h += '</div></div>';
+  let fold = '';
+  { const hh = h; h = '';
     if (ds <= today && !S.sleep[ds]) {
     h += '<div class="card"><h2>Во сколько легла вчера?</h2><div class="addrow"><input type="time" id="sleepIn" value="' + fmt(B > 1440 ? B - 1440 : B) + '"><button class="btn s" data-act="sleep">Записать</button></div></div>';
   } else if (S.sleep[ds]) {
     h += '<div class="card row"><div class="grow"><b>Вчера легла в ' + esc(S.sleep[ds]) + '</b><div class="muted">Записано. Это помогает двигать отбой мягко.</div></div></div>';
   }
 
-  const wc = S.water[ds] || 0;
-  h += '<div class="card"><div class="row" style="margin-bottom:10px"><h2 style="margin:0" class="grow">Вода</h2><span class="muted">' + wc + ' из 8 стаканов</span></div><div class="water">';
-  for (let i = 1; i <= 8; i++) h += '<button class="drop' + (i <= wc ? ' on' : '') + '" data-act="water" data-v="' + i + '" aria-label="Стакан ' + i + '">' + icon('drop') + '</button>';
-  h += '</div></div>';
 
     { const cp = cyclePhase(S.cycle, ds); if (cp) { const off = S.cycle.off[ds]; h += '<div class="card"><div class="tagc">Цикл · день ' + cp.day + '</div>' + (cp.phase === 'pms' ? '<h2 style="margin:4px 0 6px">Мягкий режим</h2><div class="muted">Нагрузок меньше, вечер спокойнее.</div><div class="addrow"><button class="btn g s" data-act="pmsTips">Советы при ПМС</button></div>' : '<h2 style="margin:4px 0 6px">' + esc(PH[cp.phase]) + '</h2><div class="muted">' + esc(PH_SAY[cp.phase]) + '</div>') + (cp.soft ? '<div class="note">' + (off ? 'Сегодня обычный режим.' : 'Расписание на сегодня смягчено: проектов меньше, добавлены тепло и сытный перекус.') + '</div><div class="addrow"><button class="btn g s" data-act="cyOff" data-v="' + ds + '">' + (off ? 'Вернуть мягкий режим' : 'Обычный режим сегодня') + '</button></div>' : '') + '</div>'; } }
+    fold = h; h = hh; }
+  if (fold) h += '<details class="fold"><summary>' + ico('moon', { size: 20 }) + ' Сон и цикл</summary>' + fold + '</details>';
   view.innerHTML = h;
   if (ds === today && firstScroll) { firstScroll = false; window.scrollTo(0, 0); }
 }
 function renderProj() {
   const act = activeProjects(), arch = S.projects.filter((p) => p.arch), parked = S.projects.filter((p) => p.park && !p.arch), mon = mondayOf(todayStr());
-  let h = '<h1>Проекты</h1><p class="sub">Вечерние подходы: пн, ср и суббота. Один проект и одна задача за подход.</p>';
+  let h = '<h1>Проекты</h1>';
   if (!S.seedP) h += '<div class="card"><h2>Мои проекты из анкеты</h2><div class="muted">Рюкзак из кожи, приложение для растений, список требований к квартире. Клетка для крыс и баночки для лекарств уйдут в парковку до своего времени.</div><div class="addrow"><button class="btn" data-act="seedProj">Добавить</button></div></div>';
   if (!act.length) h += '<div class="card"><h2>Добавь свои проекты</h2><div class="muted">Названия видишь только ты, они хранятся на телефоне. Потом в проектный вечер выберешь, чем займёшься.</div></div>';
   if (act.length > MAX_ACTIVE) h += '<div class="card"><div class="note">Активных проектов ' + act.length + '. Лучше держать 2–3, остальные убрать в парковку: так проще доводить до конца.</div></div>';
@@ -747,8 +742,8 @@ function renderProj() {
     const all = projStats(p.id), wk = projStats(p.id, mon, addDays(mon, 6)), pl = planOf(p), pc = Math.min(100, Math.round((all.n / pl) * 100));
     h += '<div class="card pj"><div class="row"><div class="grow"><h2 style="margin:0">' + esc(p.name) + '</h2>' + (p.goal ? '<div class="muted">Цель: ' + esc(p.goal) + '</div>' : '') + '</div><button class="btn g s" data-act="pjEdit" data-v="' + p.id + '">Изменить</button></div>' +
       (p.step ? '<div class="note">Следующий шаг: ' + esc(p.step) + '</div>' : '') + (p.note ? '<div class="note">Где остановилась: ' + esc(p.note) + '</div>' : '') +
-      '<div class="kv"><span>На этой неделе</span><span>' + wk.n + ' подх. · ' + hours(wk.min) + '</span></div><div class="kv"><span>Всего</span><span>' + all.n + ' подх. · ' + hours(all.min) + '</span></div>' +
-      '<div class="kv"><span>Путь к цели</span><span>' + all.n + ' из ' + pl + (p.plan ? '' : ' (примерно)') + '</span></div><div class="pbar"><i style="width:' + pc + '%"></i></div>';
+      '<div class="kv"><span>Неделя · всего</span><span>' + wk.n + ' · ' + all.n + ' подх.</span></div>' +
+      '<div class="kv"><span>Путь к цели</span><span>' + all.n + ' из ' + pl + '</span></div><div class="pbar"><i style="width:' + pc + '%"></i></div>';
     if (needsCheckpoint(p, all.n)) h += '<div class="note"><b>Ты на середине пути.</b> Это момент, когда интерес часто падает. Что дальше?</div><div class="chips">' + CP_CHOICES.map((x) => '<button class="chip pick" data-act="cp" data-v="' + p.id + '" data-c="' + x.k + '">' + esc(x.t) + '</button>').join('') + '</div>';
     h += '</div>';
   });
@@ -789,15 +784,13 @@ function relSheet() {
 /* ---------- Экран «Наставник» ---------- */
 function renderMentor() {
   const ds = todayStr(), w = weekNumber(ds, cfg.start), tip = dayTip(ds), c = S.ci[ds] || {}, mon = mondayOf(ds), rv = weekReview(mon);
-  let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>Итоги и советы</h1><p class="sub">Совет дня, отметки и итоги недели</p>';
-  h += '<div class="card tipc"><div class="tagc">' + esc(CAT_NAME[tip.tip.c] || '') + ' · ' + esc(tip.why) + '</div><h2 style="margin:4px 0 6px">' + esc(tip.tip.t) + '</h2><div>' + esc(tip.tip.x) + '</div></div>';
+  let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>Итоги</h1>';
   h += '<div class="card"><h2>Сегодня</h2>';
   const tags = (a) => (a || []).map(feelName).join(', ');
   h += (c.e || (c.ee && c.ee.length)) ? '<div class="kv"><span>Силы утром</span><span class="r">' + esc([tags(c.ee), tags(c.fm)].filter(Boolean).join('; ') || c.e + ' из 5') + '</span></div>' + (c.focus ? '<div class="kv"><span>Главное</span><span class="r">' + esc(c.focus) + '</span></div>' : '') : '<div class="muted" style="margin-bottom:8px">Утром отметь силы и выбери одно главное дело.</div>';
   h += (c.m || (c.fe && c.fe.length)) ? '<div class="kv"><span>Вечером</span><span class="r">' + esc(tags(c.fe) || c.m + ' из 5') + '</span></div>' + (c.next ? '<div class="kv"><span>Шаг на завтра</span><span class="r">' + esc(c.next) + '</span></div>' : '') : '';
   const rp = mentorReply({ e: c.e, m: c.m, next: c.next, fe: c.fe && c.fe.length ? c.fe : c.fm, ph: phKey(ds) }); if (rp) h += '<div class="note">' + esc(rp) + '</div>';
   h += '<div class="addrow" style="flex-wrap:wrap"><button class="btn s" data-act="ci" data-v="m">' + (c.e ? 'Изменить утро' : 'Утренняя отметка') + '</button><button class="btn s g" data-act="ci" data-v="e">' + (c.m ? 'Изменить итог' : 'Итог дня') + '</button></div></div>';
-  h += '<div class="card"><h2>Фокус недели ' + w + ': ' + esc(PLAN[w - 1].t) + '</h2><ul class="ul">' + PLAN[w - 1].add.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul><div class="addrow"><button class="btn g s" data-act="goPlan">Весь план на 12 недель</button></div></div>';
   h += '<div class="card"><h2>Эта неделя</h2>';
   h += [['Выполнено в среднем', rv.pct === null ? 'нет данных' : rv.pct + '%'], ['Отбой относительно плана', rv.sleepAvg === null ? 'нет данных' : (rv.sleepAvg > 0 ? '+' : '') + rv.sleepAvg + ' мин'], ['Дней с водой 6+ стаканов', rv.waterDays], ['Проектных подходов', rv.sessions.reduce((a, x) => a + x.n, 0)]].concat(S.sm.on ? [['Раз с вейпом за неделю', rv.smoked]] : []).map(([a, b]) => '<div class="kv"><span>' + a + '</span><span>' + b + '</span></div>').join('');
   h += '<div style="margin-top:10px">' + rv.obs.map((x) => '<div class="note">' + esc(x) + '</div>').join('') + '</div></div>';
@@ -928,11 +921,11 @@ function renderWeek() {
 /* ---------- Экран «План» ---------- */
 function renderPlan() {
   const w0 = weekNumber(todayStr(), cfg.start), toStart = daysToStart(todayStr(), cfg.start);
-  let h = '<button class="back" data-act="back">‹ Меню</button><h1>План на 12 недель</h1><p class="sub">По одному новому шагу. Старые остаются, новые добавляются.</p><div class="card">';
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>План на 12 недель</h1><div class="card">';
   PLAN.forEach((p) => {
     const cls = toStart > 0 ? '' : p.w < w0 ? 'past' : p.w === w0 ? 'cur' : '';
     const st = addDays(cfg.start, (p.w - 1) * 7);
-    h += '<div class="wk ' + cls + '"><div class="n">' + (cls === 'past' ? icon('check').replace('<svg', '<svg style="width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round"') : p.w) + '</div><div class="grow"><b>' + esc(p.t) + '</b><div class="muted">с ' + esc(shortDate(st)) + ' · отбой ' + fmt(bedtime(p.w, 2, cfg)) + '</div><ul>' + p.add.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div></div>';
+    h += '<div class="wk ' + cls + '"><div class="n">' + (cls === 'past' ? icon('check').replace('<svg', '<svg style="width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round"') : p.w) + '</div><details class="grow wkd"' + (cls === 'cur' ? ' open' : '') + '><summary><b>' + esc(p.t) + '</b><span class="muted">с ' + esc(shortDate(st)) + '</span></summary><ul>' + p.add.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></details></div>';
   });
   h += '</div><div class="card"><h2>Если сорвалось</h2><ul style="margin:0;padding-left:20px">' +
     ['Не два дня подряд: пропустила день, завтра делаешь минимум.', 'Возвращайся с того же дня, а не с понедельника.', '«Не моё» значит «не тот способ». Меняем время или формат, цель остаётся.', 'Нет сил: включи «День без сил» на экране «Сегодня».', 'Часы проектов не режем, а переносим на субботу.']
@@ -1102,13 +1095,13 @@ function renderMoney() {
 /* ---------- Экран «Здоровье» ---------- */
 function renderHealth() {
   const today = todayStr();
-  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Здоровье</h1><p class="sub">Каждое дело разбито на шаги. Отмечай по одному, срок можно поставить для себя.</p>';
-  S.health.forEach((x) => {
+  let h = '<button class="back" data-act="back">‹ Меню</button><h1>Здоровье</h1>';
+  S.health.forEach((x, hi) => {
     const pr = healthProgress(x), od = healthOverdue(x, today);
-    h += '<div class="card"><div class="row"><div class="grow"><h2 style="margin:0">' + esc(x.name) + '</h2><div class="muted">' + pr.d + ' из ' + pr.n + ' шагов</div></div><span class="muted">' + pr.pct + '%</span></div><div class="pbar"><i style="width:' + pr.pct + '%"></i></div>';
-    h += x.steps.map((st) => '<div class="kv"><span style="' + (st.done ? 'opacity:.55;text-decoration:line-through' : '') + '">' + esc(st.t) + '</span><button class="btn g s" data-act="hstep" data-v="' + x.id + '" data-s="' + st.id + '">' + (st.done ? 'Вернуть' : 'Готово') + '</button></div>').join('');
-    h += '<div class="addrow"><input type="text" id="hs-' + x.id + '" placeholder="Новый шаг"><button class="btn s" data-act="hsadd" data-v="' + x.id + '">Добавить</button></div>';
-    h += '<div class="muted" style="margin:10px 0 4px">Срок для себя' + (od ? ' (прошёл, передвинь или сделай один шаг)' : '') + '</div><input type="date" data-in="hdue" data-id="' + x.id + '" value="' + esc(x.due || '') + '"></div>';
+    h += '<details class="card fcard"' + (hi === 0 ? ' open' : '') + '><summary><div class="row"><div class="grow"><h2 style="margin:0">' + esc(x.name) + '</h2></div><span class="pct">' + pr.d + '/' + pr.n + '</span></div><div class="pbar"><i style="width:' + pr.pct + '%"></i></div></summary>';
+    h += x.steps.map((st) => '<div class="item' + (st.done ? ' done' : '') + '"><button class="chk" data-act="hstep" data-v="' + x.id + '" data-s="' + st.id + '" aria-label="Отметить">' + icon('check') + '</button><div class="grow t">' + esc(st.t) + '</div></div>').join('');
+    h += '<div class="addrow"><input type="text" id="hs-' + x.id + '" placeholder="Новый шаг"><button class="btn s" data-act="hsadd" data-v="' + x.id + '">+</button></div>';
+    h += '<input type="date" data-in="hdue" data-id="' + x.id + '" value="' + esc(x.due || '') + '" title="Срок для себя"' + (od ? ' style="border-color:var(--pink-d)"' : '') + '></details>';
   });
   h += '<div class="card"><h2>Новое дело о здоровье</h2><div class="addrow" style="margin-top:0"><input type="text" id="hpNew" placeholder="Например: подобрать очки"><button class="btn s" data-act="hpadd">Добавить</button></div></div>';
   view.innerHTML = h;

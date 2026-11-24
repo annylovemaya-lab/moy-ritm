@@ -341,3 +341,46 @@ textarea.tear{animation:tear .6s forwards}
 .foodSeg{flex-wrap:wrap;border-radius:22px;overflow:visible}
 .foodSeg button{flex:1 1 30%;padding:8px 6px;font-size:13px}
 input[type=range]{accent-color:var(--lav-d)}
+
+/* ---------- ver. 4.3: меньше текста, больше картинок ---------- */
+.heroHint{display:none}
+.hero .heroF img.fr{height:190px;width:auto}
+.sub{display:none}
+body[data-v="today"] .sub{display:block;margin:-6px 0 12px}
+.blk{padding:10px 12px;gap:10px;align-items:center}
+.blk .hint{display:none}
+.blk .tm{min-width:46px;font-size:15px}
+.blk .tm small{display:none}
+.blk .emo{font-size:22px;width:30px;text-align:center;flex:0 0 30px}
+.blk .ttl{font-size:15.5px;line-height:1.25}
+.prog{gap:12px;align-items:center}
+.prog .chip{white-space:nowrap;display:inline-flex;align-items:center;gap:4px;font-size:12.5px;padding:8px 10px}
+.prog .chip svg{stroke:currentColor;fill:none}
+.waterC .wi{width:22px;height:22px;display:inline-flex}
+.waterC .wi svg{stroke:#6bb6e6;fill:none;stroke-width:1.8}
+.fold{margin:12px 0;background:var(--card);border-radius:22px;padding:4px 14px;box-shadow:var(--shadow)}
+.fold>summary{list-style:none;cursor:pointer;padding:12px 0;font-weight:700;display:flex;align-items:center;gap:8px}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary svg{stroke:currentColor;fill:none}
+.fold .card{box-shadow:none;padding:8px 0;background:transparent}
+.colorStrip{padding:8px 14px}
+.menuHead p{display:none}
+.tile{min-height:68px}
+details.calm .note{font-size:14px}
+
+/* ---------- ver. 5.0: меньше текста, больше картинок ---------- */
+h2 + .muted, h1 + .muted, .card > p.muted, .card > .muted.lead{display:none}
+.card:empty{display:none}
+h1:has(.pgI){display:flex;align-items:center;gap:12px}
+.pgI{width:52px;height:52px;flex:0 0 52px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;background:hsl(var(--th) 75% 92%);color:hsl(var(--th) 35% 38%);--af:hsl(var(--th) 80% 84% / .9)}
+.pgI svg{stroke:currentColor}
+.wkd summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
+.wkd summary::-webkit-details-marker{display:none}
+.wkd ul{margin:6px 0 0;padding-left:18px}
+.wk{padding:10px 0}
+.fcard>summary{list-style:none;cursor:pointer}
+.fcard>summary::-webkit-details-marker{display:none}
+.fcard .pct{font-weight:800;color:var(--lav-d)}
+.fcard .pbar{margin:8px 0 4px}
+.fcard[open]>summary{margin-bottom:6px}
+.hero .heroF img.fr{height:170px}
