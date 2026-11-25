@@ -6,7 +6,8 @@ import { SLOTS, pickQs, QALL, WEEKLY } from './survey.js';
 import { gcCfg, gcSave, gcReady, gcAsk, gcTest } from './gigachat.js';
 
 let C = null; // контекст из app.js
-export const initV4 = (c) => { C = c; };
+import { initV5, infoAct, wantRow, surveyEffects, insightsCard } from './v5.js';
+export const initV4 = (c) => { C = c; initV5(c); };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 const pad = (n) => String(n).padStart(2, '0');
 const tm = (m) => pad(Math.floor((m % 1440) / 60)) + ':' + pad(m % 60);
@@ -124,7 +125,7 @@ export const swatches = (c1, c2, small) => '<div class="sw' + (small ? ' sm' : '
 export const colorStrip = (ds) => { const [a, b] = C.colors(ds); return '<div class="card colorStrip"><span class="muted">Цвет дня</span>' + swatches(a, b) + '</div>'; };
 
 /* ---------- Нижняя панель: настраиваемый набор ---------- */
-export const NAVOPTS = [['today', 'Сейчас', 'clock'], ['week', 'План', 'calendar'], ['friend', 'Подружка', 'heart'], ['proj', 'Проекты', 'rocket'], ['habits', 'Привычки', 'spark'], ['health', 'Здоровье', 'heartbeat'], ['taste', 'Подборки', 'clapper']];
+export const NAVOPTS = [['today', 'Сейчас', 'clock'], ['week', 'План', 'calendar'], ['friend', 'Подружка', 'heart'], ['proj', 'Проекты', 'rocket'], ['habits', 'Привычки', 'spark'], ['health', 'Здоровье', 'heartbeat']];
 export function navTabs() { const sel = (V().nav && V().nav.length ? V().nav : ['today', 'week', 'friend']).filter((k) => NAVOPTS.some((x) => x[0] === k)).slice(0, 4); return sel.map((k) => NAVOPTS.find((x) => x[0] === k)).filter(Boolean); }
 function navSheet() {
   const sel = navTabs().map((x) => x[0]);
@@ -152,7 +153,7 @@ export function surveySheet(slot) {
   const qs = pickQs(slot, ds, { weekly: weeklyDue }).filter((q) => weekend || q.k !== 'nap'), a = (V().sv[ds] = V().sv[ds] || {}), cur = (a[slot] = a[slot] || {});
   svState = { slot, ds }; const f = say(slot, ds + 'sv');
   let h = '<div class="svHead">' + face(f.pose) + '<div><div class="tagc">' + ico(SLOTS[slot][1], { size: 16 }) + ' ' + SLOTS[slot][0] + ' · быстро</div><h2 style="margin:2px 0 0">' + (V().name ? esc(V().name) + ', ' : '') + 'пара вопросов</h2></div></div>';
-  qs.forEach((q) => { h += '<div class="q"><div class="qt">' + esc(q.q) + '</div><div class="chips">' + q.o.map((o) => '<button class="chip pick' + (cur[q.k] === o ? ' on' : '') + '" data-act="svA" data-v="' + q.k + '|' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div></div>'; });
+  qs.forEach((q) => { h += '<div class="q"><div class="qt">' + esc(q.q) + (q.multi ? ' <small class="muted">можно несколько</small>' : '') + '</div><div class="chips">' + q.o.map((o0) => { const o = Array.isArray(o0) ? o0[0] : o0, lb = Array.isArray(o0) ? o0[1] : o0, on = q.multi ? (Array.isArray(cur[q.k]) && cur[q.k].includes(o)) : cur[q.k] === o; return '<button class="chip pick' + (on ? ' on' : '') + '" data-act="svA" data-v="' + q.k + '|' + esc(o) + '">' + esc(lb) + '</button>'; }).join('') + '</div></div>'; });
   if (slot === 'night') h += '<div class="q"><div class="qt">Что хорошего было? Одной строкой</div><input type="text" id="svGood" placeholder="по желанию" value="' + esc(cur.text || '') + '"></div>';
   h += '<div class="addrow"><button class="btn" data-act="svDone">Готово</button><button class="btn g" data-act="svLater">Позже</button></div>';
   C.openSheet(h, { t: 'survey' });
@@ -160,14 +161,15 @@ export function surveySheet(slot) {
 export function svAct(act, v) {
   if (!svState) return false; const { slot, ds } = svState;
   if (act === 'svA') {
-    const [k, o] = v.split('|'); if (k === 'int') V().svWeekly[ds.slice(0, 7) + Math.floor(Number(ds.slice(8)) / 7)] = 1; const cur = ((V().sv[ds] = V().sv[ds] || {})[slot] = V().sv[ds][slot] || {}); cur[k] = cur[k] === o ? '' : o;
+    const [k, o] = v.split('|'); const qm = QALL[slot].find((x) => x.k === k); if (qm && qm.multi) { const cm = ((V().sv[ds] = V().sv[ds] || {})[slot] = V().sv[ds][slot] || {}); let arr = Array.isArray(cm[k]) ? cm[k] : []; arr = o === 'clean' ? (arr.includes('clean') ? [] : ['clean']) : (arr.includes(o) ? arr.filter((x) => x !== o) : [...arr.filter((x) => x !== 'clean'), o]); cm[k] = arr; C.save(); (document.querySelectorAll ? document.querySelectorAll('[data-act="svA"]') : []).forEach((b) => { const [kk, oo] = b.dataset.v.split('|'); if (kk === k) b.classList.toggle('on', arr.includes(oo)); }); sfx('done'); return true; }
+    if (k === 'int') V().svWeekly[ds.slice(0, 7) + Math.floor(Number(ds.slice(8)) / 7)] = 1; const cur = ((V().sv[ds] = V().sv[ds] || {})[slot] = V().sv[ds][slot] || {}); cur[k] = cur[k] === o ? '' : o;
     const q = QALL[slot].find((x) => x.k === k); if (q && q.ci && q.ci[o]) { const c = (C.S.ci[ds] = C.S.ci[ds] || {}); if (slot === 'morning') c.e = q.ci[o]; if (slot === 'evening') c.m = q.ci[o]; }
     if (k === 'nap') { const n = (V().nap[ds] = V().nap[ds] || {}); n.day = o !== 'не было' && cur[k] === o; n.src = 'sv'; }
     if (k === 'eve') { const n = (V().nap[ds] = V().nap[ds] || {}); n.eve = o === 'вздремнула' && cur[k] === o; }
     C.save(); (document.querySelectorAll ? document.querySelectorAll('[data-act="svA"]') : []).forEach((b) => { const [kk, oo] = b.dataset.v.split('|'); if (kk === k) b.classList.toggle('on', cur[k] === oo); });
     sfx('done'); if (q && q.tool && cur[k] && cur[k] !== 'нет') { svState.tool = q.tool; } return true;
   }
-  if (act === 'svDone') { const g = document.getElementById('svGood'); if (g) { V().sv[ds][slot].text = g.value; } V().svDone[ds + slot] = 1; C.save(); const tool = svState.tool; svState = null; C.closeSheet(); sfx('survey'); C.redraw(); if (tool === 'nap') napTool(); else if (tool === 'calm') C.calmStart('anger'); else C.toast(say('save', ds).text); return true; }
+  if (act === 'svDone') { const g = document.getElementById('svGood'); if (g) { V().sv[ds][slot].text = g.value; } V().svDone[ds + slot] = 1; C.save(); const tool = svState.tool, eff = surveyEffects(slot, ds, (V().sv[ds] || {})[slot] || {}); svState = null; C.closeSheet(); sfx('survey'); C.redraw(); if (tool === 'nap') napTool(); else if (tool === 'calm') C.calmStart('anger'); else C.toast(eff.length ? eff[0] : say('save', ds).text); return true; }
   if (act === 'svLater') { V().svSkip[ds + slot] = Date.now(); C.save(); svState = null; C.closeSheet(); return true; }
   return false;
 }
@@ -235,7 +237,7 @@ export function napAct(act, v) {
 /* ---------- Меню ---------- */
 const TILES = [
   ['Каждый день', [['proj', 'Проекты', 'rocket', 150], ['plan', 'План на 12 недель', 'target', 205], ['habits', 'Мои привычки', 'spark', 265]]],
-  ['Для меня', [['taste', 'Подборки', 'clapper', 300], ['cycle', 'Цикл', 'moon', 345], ['health', 'Здоровье', 'heartbeat', 175], ['mentor', 'Итоги', 'bulb', 330], ['books', 'Книги', 'notebook', 25]]],
+  ['Для меня', [['cycle', 'Цикл', 'moon', 345], ['health', 'Здоровье', 'heartbeat', 175], ['mentor', 'Итоги', 'bulb', 330], ['books', 'Книги', 'notebook', 25]]],
   ['Цели', [['nap', 'Без дневного сна', 'sleepy', 235], ['calm', 'Спокойствие', 'lotus', 160]]],
   ['Дом и деньги', [['money', 'Деньги', 'coin', 48], ['apts', 'Квартиры', 'house', 210]]],
   ['Настройки', [['sounds', 'Звуки', 'bell', 320], ['ai', 'ИИ GigaChat', 'robot', 255], ['widget', 'Виджет', 'widget', 190], ['me', 'Обо мне', 'user', 340], ['navSet', 'Нижняя панель', 'grid', 220], ['theme', 'Оформление', 'palette', 300], ['set', 'Защита и копия', 'gear', 265]]]
@@ -243,6 +245,7 @@ const TILES = [
 export function renderMenu() {
   const f = say('save', 'menu');
   let h = '<div class="menuHead">' + face('wave') + '<div><h1 style="margin:0">Меню</h1></div></div>';
+  h += wantRow();
   TILES.forEach(([title, items]) => {
     h += '<div class="mh">' + esc(title) + '</div><div class="tiles">';
     items.forEach(([k, t, i, hue]) => { h += '<button class="tile" style="--th:' + hue + '" data-act="' + (k === 'navSet' ? 'navSet' : 'go') + '" data-v="' + k + '"><span class="ti">' + ico(i, { size: 34, sw: 1.5 }) + '</span><b>' + esc(t) + '</b></button>'; });
@@ -292,7 +295,7 @@ function themeAct(a, v) {
 }
 
 /* ---------- Подружка: экран и чат ---------- */
-const QUICK = [['Что у меня сейчас?', 'now'], ['Мне тревожно', 'calm'], ['Бесит всё', 'anger'], ['Тянет в сон', 'nap'], ['Включить песню', 'song'], ['Поболтать', 'chat']];
+const QUICK = [['Что у меня сейчас?', 'now'], ['Мне тревожно', 'calm'], ['Бесит всё', 'anger'], ['Тянет в сон', 'nap'], ['Потренируемся', 'train'], ['Включить песню', 'song'], ['Поболтать', 'chat']];
 export function renderFriend() {
   const fn = V().fname || 'Подружка', last = V().chat.filter((m) => m.r === 'f').slice(-1)[0];
   let h = '<div class="menuHead"><div><h1 style="margin:0">' + esc(fn) + '</h1><p class="sub" style="margin:2px 0 0">' + (gcReady() ? 'Болтаем с ИИ' : 'Подсказки по приложению') + '</p></div></div>';
@@ -323,6 +326,7 @@ function localReply(q) {
   if (/тревож|страшно|паник|накрыва/.test(t)) return R('think', 'Давай вернёмся в «здесь и сейчас». Это займёт минуту-две.', [['Заземление', 'calmGo', 'ground'], ['Другие упражнения', 'calmMenu', '']]);
   if (/бесит|злю|злость|раздраж|ярост/.test(t)) return R('angry', 'Злость имеет право на выход. Выпустим пар безопасно: движение, смятая бумага, злое письмо.', [['Выплеснуть', 'calmGo', 'anger']]);
   if (/сон|спать|засып|клонит|тянет лечь|вздремн/.test(t)) return R('think', 'Сонливость волной приходит и уходит. Попробуем взбодриться на ногах.', [['Набор «не уснуть»', 'napTool', '']]);
+  if (/тренир|зарядк|размя|упражнен|потянуть|растяж/.test(t)) return R('cheer', 'Давай. Выбери тренировку, я проведу по таймеру.', [['Выбрать', 'train', '']]);
   if (/песн|музык|включ|послуш/.test(t)) { const m = C.songs(/спокой|тих/.test(t) ? 'спокойствие' : /груст|плох/.test(t) ? 'грусть' : /трен|спорт/.test(t) ? 'тренировка' : 'утро'); return R('cheer', 'Вот три песни под настроение: ' + m.map((x) => x.t).join('; ') + '.', m.slice(0, 2).map((x) => ['▶ ' + x.t.split(' — ')[0], 'open_url', x.href])); }
   if (/сейчас|план|расписан|дальше/.test(t)) { const l = C.dayList(ds), i = nowIndex(l, ds), b = l[i >= 0 ? i : 0], n = l.slice((i >= 0 ? i : 0) + 1).find((x) => !x.skipped); return R('wave', b ? 'Сейчас в плане: ' + b.title + ' (' + tm(b.t) + ').' + (n ? ' Дальше в ' + tm(n.t) + ': ' + n.title + '.' : '') : 'На сегодня пусто.', [['Открыть «Сегодня»', 'go', 'today']]); }
   const hit = C.ask(q).find((x) => x.s >= 3);
@@ -343,8 +347,8 @@ export async function friendSend(text) {
   push(rep); sending = false; C.save(); C.redraw(); try { window.scrollTo(0, (document.body || {}).scrollHeight || 0); } catch (e) { /* без прокрутки */ }
 }
 export function friendQuick(k) {
-  const m = { now: 'что у меня сейчас', calm: 'мне тревожно', anger: 'всё бесит', nap: 'тянет в сон', song: 'включи песню', chat: '' }[k];
-  if (k === 'chat') { push({ r: 'f', p: 'wave', t: gcReady() ? 'Рассказывай, как день?' : 'Рассказывай. Без ИИ я лучше всего отвечаю на вопросы про план, еду, образ, музыку и спокойствие.' }); C.save(); C.redraw(); const i = document.getElementById('chatIn'); if (i) i.focus(); return; }
+  const m = { now: 'что у меня сейчас', calm: 'мне тревожно', anger: 'всё бесит', nap: 'тянет в сон', song: 'включи песню', train: 'потренируемся', chat: '' }[k];
+  if (k === 'chat') { push({ r: 'f', p: 'wave', t: gcReady() ? 'Рассказывай, как день?' : 'Рассказывай. Без ИИ я лучше всего отвечаю на вопросы про план, тренировки, порядок, музыку и спокойствие.' }); C.save(); C.redraw(); const i = document.getElementById('chatIn'); if (i) i.focus(); return; }
   friendSend(m);
 }
 
@@ -369,11 +373,11 @@ export function sndAct(act, v) {
 
 /* ---------- ИИ ---------- */
 export function renderAI() {
-  const c = gcCfg(), mode = c.proxy || !c.key ? 'proxy' : 'direct';
-  let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>ИИ GigaChat</h1><p class="sub">Подружка сможет болтать свободно</p>';
-  h += '<div class="card"><div class="tagc">Статус</div><h2 style="margin:4px 0">' + (gcReady() ? 'Настроено' : 'Не подключено') + '</h2><div class="muted">Без ИИ подружка отвечает по готовым подсказкам. С ИИ отвечает на любые вопросы, зная твой день.</div></div>';
-  h += '<div class="card"><h2>Через прокси (надёжно)</h2><div class="muted" style="margin-bottom:8px">Ключ GigaChat хранится в твоей облачной функции, а не в телефоне. Как её создать: в инструкции, раздел «ИИ».</div><label>Адрес функции<input type="url" id="gcProxy" placeholder="https://functions.yandexcloud.net/…" value="' + esc(c.proxy || '') + '"></label><label>Пароль приложения<input type="password" id="gcSecret" placeholder="слово-пароль из функции" value="' + esc(c.secret || '') + '"></label></div>';
-  h += '<div class="card"><h2>Напрямую (может не сработать)</h2><div class="muted" style="margin-bottom:8px">Ключ авторизации из кабинета GigaChat хранится на этом телефоне. Safari может не принять сертификат Сбера; тогда используй прокси.</div><label>Ключ авторизации<input type="password" id="gcKey" placeholder="Authorization key" value="' + esc(c.key || '') + '"></label></div>';
+  const c = gcCfg();
+  let h = '<button class="back" data-act="go" data-v="menu">‹ Меню</button><h1>ИИ GigaChat</h1>';
+  h += '<div class="card"><div class="tagc">Статус</div><h2 style="margin:4px 0">' + (gcReady() ? (c.proxy ? 'Подключено через прокси' : 'Подключено напрямую') : 'Не подключено') + '</h2></div>';
+  h += '<div class="card"><h2>Прокси (работает всегда)</h2><div class="dtNote">Напрямую iPhone и Safari к GigaChat не подключаются: у Сбера сертификат Минцифры, а Safari его не знает, и сервер не разрешает запросы из браузера. Это ограничение Safari, из приложения его не обойти. Поэтому нужна своя маленькая функция в облаке: 10 минут, один раз. Подробная инструкция: файл «Инструкция_GigaChat_прокси.html» рядом с папкой проекта.</div><label>Адрес функции<input type="url" id="gcProxy" placeholder="https://functions.yandexcloud.net/…" value="' + esc(c.proxy || '') + '"></label><label>Пароль приложения<input type="password" id="gcSecret" placeholder="то же слово, что в функции" value="' + esc(c.secret || '') + '"></label></div>';
+  h += '<details class="card"><summary><b>Напрямую (скорее всего не заработает)</b></summary><label style="margin-top:10px">Ключ авторизации<input type="password" id="gcKey" placeholder="Authorization key" value="' + esc(c.key || '') + '"></label></details>';
   h += '<div class="addrow"><button class="btn" data-act="gcSave">Сохранить и проверить</button><button class="btn g" data-act="gcOff">Отключить</button></div><div id="gcMsg" class="note" style="display:none"></div>';
   return h;
 }
@@ -463,7 +467,7 @@ export function renderHabits() {
   const sv = Object.entries(V().sv); const cnt = {}; sv.forEach(([ds, o]) => Object.values(o).forEach((q) => { if (q.sleepy && q.sleepy !== 'нет') cnt.sl = (cnt.sl || 0) + 1; if (q.vape && q.vape !== 'нет') cnt.vp = (cnt.vp || 0) + 1; if (q.day === 'тяжело') cnt.hd = (cnt.hd || 0) + 1; }));
   h += '<div class="card"><h2>По опросам</h2><div class="kv"><span>Дней, когда тянуло в сон</span><span class="r">' + (cnt.sl || 0) + '</span></div><div class="kv"><span>Тяжёлых дней</span><span class="r">' + (cnt.hd || 0) + '</span></div></div>';
   if (!sg.length && !sh.length && !sk.length) h += '<div class="card"><div class="muted">Пока мало данных. Когда будешь править время дел или пропускать их, здесь появятся наблюдения и предложения.</div></div>';
-  h += analytics();
+  h += insightsCard() + analytics();
   return h;
 }
 export function habitAct(act, v) {
@@ -546,6 +550,7 @@ const PAGES = { books: renderBooks, theme: renderTheme, menu: renderMenu, friend
 export const pageOf = (tab) => (PAGES[tab] ? PAGES[tab]() : null);
 export const isPage = (tab) => !!PAGES[tab];
 export async function act(a, v, el) {
+  if (infoAct(a, v)) return true;
   if (a === 'go') { C.closeSheet(); if (v === 'calm') { C.calmMenu(); return true; } C.setTab(v === 'projects' ? 'proj' : v); return true; }
   if (a === 'edit') { editSheet(v); return true; }
   if (/^bk[A-Z]/.test(a)) return bookAct(a, v);

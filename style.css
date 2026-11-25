@@ -384,3 +384,27 @@ h1:has(.pgI){display:flex;align-items:center;gap:12px}
 .fcard .pbar{margin:8px 0 4px}
 .fcard[open]>summary{margin-bottom:6px}
 .hero .heroF img.fr{height:170px}
+
+/* ---------- ver. 5.1: окна-подсказки, тренировка, «Хочу…» ---------- */
+.dtHead{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.dtHead .pgI{width:52px;height:52px;flex:0 0 52px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;background:hsl(var(--th) 75% 92%);color:hsl(var(--th) 35% 38%)}
+.dtLead{font-weight:700;margin:6px 0 10px;font-size:16px}
+.dtSteps{margin:6px 0 10px;padding-left:22px}.dtSteps li{margin:7px 0;line-height:1.4}
+.dtBig{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 12px;padding:14px}
+.dtTasks{margin:6px 0 10px}
+.dtOptT{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--lav-d);margin:10px 0 6px}
+.dtOpts{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.dtOpt{background:var(--lav);border-radius:16px;padding:10px 14px;line-height:1.35}
+.dtNote{font-size:13px;color:var(--soft);margin:8px 0;line-height:1.4}
+.gWrap{text-align:center}.gFig{height:230px;display:flex;justify-content:center}.gFig img{height:100%;width:auto}
+.gT{margin:4px 0}.gTime{font-size:56px;font-weight:800;color:var(--lav-d);line-height:1.1;margin:4px 0}
+.gHow{font-size:15px;line-height:1.4;margin:4px 6px 10px}
+.gDots{display:flex;justify-content:center;gap:5px;margin:8px 0}.gDots i{width:9px;height:9px;border-radius:50%;background:var(--line)}.gDots i.d{background:var(--lav-d)}.gDots i.c{background:var(--pink-d,#e9a9c1);transform:scale(1.3)}
+.gNext{font-size:12px}
+.trainList{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.wantRow{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px}
+.wantB{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 2px;border-radius:20px;border:0;background:var(--lav);color:var(--lav-d);font:inherit;cursor:pointer}
+.wantB b{font-size:11px;font-weight:700}
+.wantB:nth-child(2n){background:var(--pink)}
+.wantBig{font-size:22px;font-weight:800;line-height:1.25;margin:12px 0}
+.card .muted.keep{display:block}

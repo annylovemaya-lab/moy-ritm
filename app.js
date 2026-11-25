@@ -705,7 +705,7 @@ function renderToday() {
     const pst = ds < today || (ds === today && nowMin() > b.t + Math.max(b.dur, 15) && i !== nowIdx);
     const sess = isSess(b), asg = sess ? (S.pa[ds] || {})[b.id] : null, pr = asg && projById(asg.pid);
     const title = pr ? pr.name : b.title.replace(/^Проект: /, 'Проект · ');
-    const act = sess ? 'sess' : b.id === 'save' ? 'saveSheet' : 'open';
+    const act = sess ? 'sess' : b.id === 'save' ? 'saveSheet' : 'info';
     h += '<div class="blk c-' + b.cat + (isDone ? ' done' : '') + (i === nowIdx ? ' now' : '') + (pst ? ' past' : '') + (b.skipped ? ' skip' : '') + '" data-act="' + act + '" data-v="' + b.id + '">' +
       '<div class="tm">' + fmt(b.t) + '</div><div class="emo">' + (EMO[b.id] || '•') + '</div>' +
       '<div class="grow"><div class="ttl">' + esc(title) + (b.optional ? '<span class="tag">по желанию</span>' : '') + '</div></div>' +

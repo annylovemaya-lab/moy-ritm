@@ -28,6 +28,13 @@ export async function gcAsk(messages) {
   throw new Error('GigaChat не настроен');
 }
 export async function gcTest() {
+  const c = gcCfg();
   try { const t = await gcAsk([{ role: 'user', content: 'Ответь одним словом: привет' }]); return { ok: true, msg: 'Работает: «' + t.slice(0, 40) + '»' }; }
-  catch (e) { const m = String(e && e.message || e); return { ok: false, msg: /Failed to fetch|Load failed|NetworkError/i.test(m) ? 'Safari не смог достучаться до GigaChat напрямую (сертификат или CORS). Используй режим «через прокси».' : m }; }
+  catch (e) {
+    const m = String(e && e.message || e), net = /Failed to fetch|Load failed|NetworkError/i.test(m);
+    if (net && c.proxy) return { ok: false, msg: 'Не достучалась до функции. Проверь адрес (должен начинаться с https://) и что в Яндекс Облаке включена «Публичная функция».' };
+    if (net) return { ok: false, msg: 'Напрямую Safari не может подключиться: сертификат Сбера и запрет CORS. Нужен прокси, инструкция в файле «Инструкция_GigaChat_прокси.html».' };
+    if (/Неверный пароль/.test(m)) return { ok: false, msg: 'Пароль приложения не совпал с тем, что записан в функции (APP_SECRET).' };
+    return { ok: false, msg: m };
+  }
 }

@@ -2,7 +2,8 @@
 export const SLOTS = { morning: ['Утро', 'sun'], day: ['День', 'cloud'], evening: ['Вечер', 'moon'], night: ['Перед сном', 'stars'] };
 const Q = {
   morning: [
-    { k: 'wake', q: 'Как проснулась?', o: ['бодро', 'нормально', 'тяжело', 'нет сил'], ci: { 'бодро': 4, 'нормально': 3, 'тяжело': 2, 'нет сил': 1 } },
+    { k: 'wake', core: true, q: 'Как проснулась?', o: ['бодро', 'нормально', 'тяжело', 'нет сил'], ci: { 'бодро': 4, 'нормально': 3, 'тяжело': 2, 'нет сил': 1 } },
+    { k: 'tidy', q: 'Что не так с порядком?', multi: true, core: true, o: [['dish', 'Посуда'], ['desk', 'Стол'], ['floor', 'Пол'], ['dust', 'Пыль'], ['things', 'Вещи'], ['trash', 'Мусор'], ['bath', 'Ванная'], ['clean', 'Всё чисто']] },
     { k: 'mood', q: 'Настроение с утра', o: ['радость', 'спокойствие', 'тревога', 'раздражение', 'пустота'] },
     { k: 'vit', q: 'Витамины и вода', o: ['всё выпила', 'ещё нет', 'нечего пить'] },
     { k: 'main', q: 'Главное на сегодня', o: ['работа', 'проект', 'дела и быт', 'отдых', 'встреча'] },
@@ -50,8 +51,8 @@ const Q = {
 export const WEEKLY = { k: 'int', q: 'Близость на этой неделе (по желанию)', o: ['была', 'не было', 'не хочу отвечать'], weekly: true };
 const hash = (s) => { let x = 0; for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) >>> 0; return x; };
 export function pickQs(slot, ds, opts = {}) {
-  const all = Q[slot] || [], core = all.slice(0, 1), rest = all.slice(1), n = Math.max(1, rest.length), r = hash(ds + slot) % n;
-  const q = [...core, rest[r], rest[(r + 3) % n], rest[(r + 7) % n]].filter((x, i, a) => x && a.indexOf(x) === i).slice(0, 4);
+  const all = Q[slot] || [], core = all.filter((q) => q.core).length ? all.filter((q) => q.core) : all.slice(0, 1), rest = all.filter((q) => !core.includes(q)), n = Math.max(1, rest.length), r = hash(ds + slot) % n;
+  const q = [...core, rest[r], rest[(r + 3) % n], rest[(r + 7) % n]].filter((x, i, a) => x && a.indexOf(x) === i).slice(0, 5);
   if (opts.weekly && slot === 'evening') q.push(WEEKLY);
   return q;
 }
